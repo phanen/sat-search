@@ -1,0 +1,5 @@
+1.Source-Code
+__pycache__
+*.out
+*.cnf
+*.pdf
