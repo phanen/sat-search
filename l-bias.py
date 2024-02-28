@@ -1,5 +1,7 @@
-import os
 import time
+from subprocess import Popen
+
+from common import *
 
 FullRound = 32
 
@@ -12,21 +14,11 @@ GroupConstraintChoice = 1
 # Parameters for choice 1
 GroupNumForChoice1 = 1
 
-LinearBiasBound = list([])
-for i in range(FullRound):
-    LinearBiasBound += [0]
+LinearBiasBound = FullRound * [0]
 
 
 def CountClausesInRoundFunction(Round, Bias, clause_num):
-    count = clause_num
-    # Nonzero input
-    count += 1
-    # Clauses for Sbox
-    for r in range(Round):
-        for i in range(16):
-            for j in range(51):
-                count += 1
-    return count
+    return clause_num + 1 + Round * 16 * 51
 
 
 def CountClausesInSequentialEncoding(main_var_num, cardinalitycons, clause_num):
@@ -34,19 +26,9 @@ def CountClausesInSequentialEncoding(main_var_num, cardinalitycons, clause_num):
     n = main_var_num
     k = cardinalitycons
     if k > 0:
-        count += 1
-        for j in range(1, k):
-            count += 1
-        for i in range(1, n - 1):
-            count += 3
-        for j in range(1, k):
-            for i in range(1, n - 1):
-                count += 2
-        count += 1
+        return count + 1 + (k - 1) + (n - 2) * 3 + (k - 1) * (n - 2) * 2 + 1
     if k == 0:
-        for i in range(n):
-            count += 1
-    return count
+        return count + n
 
 
 def CountClausesForMatsuiStrategy(n, k, left, right, m, clausenum):
@@ -81,27 +63,17 @@ def GenSequentialEncoding(x, u, main_var_num, cardinalitycons, fout):
         for i in range(1, n - 1):
             clauseseq = f"-{x[i] + 1} {u[i][0] + 1} 0\n"
             fout.write(clauseseq)
-            clauseseq = (
-                f"-{u[i - 1][0] + 1} {u[i][0] + 1} 0\n"
-            )
+            clauseseq = f"-{u[i - 1][0] + 1} {u[i][0] + 1} 0\n"
             fout.write(clauseseq)
-            clauseseq = (
-                f"-{x[i] + 1} -{u[i - 1][k - 1] + 1} 0\n"
-            )
+            clauseseq = f"-{x[i] + 1} -{u[i - 1][k - 1] + 1} 0\n"
             fout.write(clauseseq)
         for j in range(1, k):
             for i in range(1, n - 1):
-                clauseseq = (
-                    f"-{x[i] + 1} -{u[i - 1][j - 1] + 1} {u[i][j] + 1} 0\n"
-                )
+                clauseseq = f"-{x[i] + 1} -{u[i - 1][j - 1] + 1} {u[i][j] + 1} 0\n"
                 fout.write(clauseseq)
-                clauseseq = (
-                    f"-{u[i - 1][j] + 1} {u[i][j] + 1} 0\n"
-                )
+                clauseseq = f"-{u[i - 1][j] + 1} {u[i][j] + 1} 0\n"
                 fout.write(clauseseq)
-        clauseseq = (
-            f"-{x[n - 1] + 1} -{u[n - 2][k - 1] + 1} 0\n"
-        )
+        clauseseq = f"-{x[n - 1] + 1} -{u[n - 2][k - 1] + 1} 0\n"
         fout.write(clauseseq)
     if k == 0:
         for i in range(n):
@@ -113,26 +85,18 @@ def GenMatsuiConstraint(x, u, n, k, left, right, m, fout):
     if m > 0:
         if (left == 0) and (right < n - 1):
             for i in range(1, right + 1):
-                clauseseq = (
-                    f"-{x[i] + 1} -{u[i - 1][m - 1] + 1} 0\n"
-                )
+                clauseseq = f"-{x[i] + 1} -{u[i - 1][m - 1] + 1} 0\n"
                 fout.write(clauseseq)
         if (left > 0) and (right == n - 1):
             for i in range(0, k - m):
-                clauseseq = (
-                    f"{u[left - 1][i] + 1} -{u[right - 1][i + m] + 1} 0\n"
-                )
+                clauseseq = f"{u[left - 1][i] + 1} -{u[right - 1][i + m] + 1} 0\n"
                 fout.write(clauseseq)
             for i in range(0, k - m + 1):
-                clauseseq = (
-                    f"{u[left - 1][i] + 1} -{x[right] + 1} -{u[right - 1][i + m - 1] + 1} 0\n"
-                )
+                clauseseq = f"{u[left - 1][i] + 1} -{x[right] + 1} -{u[right - 1][i + m - 1] + 1} 0\n"
                 fout.write(clauseseq)
         if (left > 0) and (right < n - 1):
             for i in range(0, k - m):
-                clauseseq = (
-                    f"{u[left - 1][i] + 1} -{u[right][i + m] + 1} 0\n"
-                )
+                clauseseq = f"{u[left - 1][i] + 1} -{u[right][i + m] + 1} 0\n"
                 fout.write(clauseseq)
     if m == 0:
         for i in range(left, right + 1):
@@ -390,19 +354,13 @@ def Decision(Round, Bias, MatsuiRoundIndex, MatsuiCount, flag):
         )
     file.close()
     # Call solver cadical
-    order = (
-        f"~/Install/cadical/build/cadical Problem-Round{Round}-Bias{Bias}.cnf > Round{Round}-Bias{Bias}-solution.out"
-    )
-    os.system(order)
+    order = f"~/Install/cadical/build/cadical Problem-Round{Round}-Bias{Bias}.cnf > Round{Round}-Bias{Bias}-solution.out"
+    Popen(order, shell=True).wait()
     # Extracting results
-    order = (
-        f"sed -n '/s SATISFIABLE/p' Round{Round}-Bias{Bias}-solution.out > SatSolution.out"
-    )
-    os.system(order)
-    order = (
-        f"sed -n '/s UNSATISFIABLE/p' Round{Round}-Bias{Bias}-solution.out > UnsatSolution.out"
-    )
-    os.system(order)
+    order = f"sed -n '/s SATISFIABLE/p' Round{Round}-Bias{Bias}-solution.out > SatSolution.out"
+    Popen(order, shell=True).wait()
+    order = f"sed -n '/s UNSATISFIABLE/p' Round{Round}-Bias{Bias}-solution.out > UnsatSolution.out"
+    Popen(order, shell=True).wait()
     satsol = open("SatSolution.out")
     unsatsol = open("UnsatSolution.out")
     satresult = satsol.readlines()
@@ -414,22 +372,18 @@ def Decision(Round, Bias, MatsuiRoundIndex, MatsuiCount, flag):
     if (len(satresult) > 0) and (len(unsatresult) == 0):
         flag = True
     order = "rm SatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     order = "rm UnsatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     # Removing cnf file
     order = f"rm Problem-Round{Round}-Bias{Bias}.cnf"
-    os.system(order)
+    Popen(order, shell=True).wait()
     time_end = time.time()
     # Printing solutions
     if flag == True:
-        print(
-            f"Round:{Round}; Bias: {Bias}; Sat; TotalCost: {time_end - time_start}"
-        )
+        print(f"Round:{Round}; Bias: {Bias}; Sat; TotalCost: {time_end - time_start}")
     else:
-        print(
-            f"Round:{Round}; Bias: {Bias}; Unsat; TotalCost: {time_end - time_start}"
-        )
+        print(f"Round:{Round}; Bias: {Bias}; Unsat; TotalCost: {time_end - time_start}")
     return flag
 
 
@@ -451,9 +405,7 @@ for totalround in range(SearchRoundStart, SearchRoundEnd):
                 MatsuiCount += 1
     # Printing Matsui conditions
     file = open("MatsuiCondition.out", "a")
-    resultseq = (
-        f"Round: {totalround}; Partial Constraint Num: {MatsuiCount}\n"
-    )
+    resultseq = f"Round: {totalround}; Partial Constraint Num: {MatsuiCount}\n"
     file.write(resultseq)
     file.write(f"{MatsuiRoundIndex}\n")
     file.close()
@@ -463,9 +415,7 @@ for totalround in range(SearchRoundStart, SearchRoundEnd):
     LinearBiasBound[totalround] = CountBias - 1
     time_end = time.time()
     file = open("RunTimeSummarise.out", "a")
-    resultseq = (
-        f"Round: {totalround}; Linear Biase: {LinearBiasBound[totalround]}; Runtime: {time_end - time_start}\n"
-    )
+    resultseq = f"Round: {totalround}; Linear Biase: {LinearBiasBound[totalround]}; Runtime: {time_end - time_start}\n"
     file.write(resultseq)
     file.close()
 print(str(LinearBiasBound))

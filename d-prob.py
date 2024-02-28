@@ -1,7 +1,7 @@
-import os
 import time
+from subprocess import Popen
 
-from common import P, SymbolicCNFConstraintForSbox55
+from common import *
 
 FullRound = 32
 
@@ -63,27 +63,17 @@ def GenSequentialEncoding(x, u, main_var_num, cardinalitycons, fout):
         for i in range(1, n - 1):
             clauseseq = f"-{x[i] + 1} {u[i][0] + 1} 0\n"
             fout.write(clauseseq)
-            clauseseq = (
-                f"-{u[i - 1][0] + 1} {u[i][0] + 1} 0\n"
-            )
+            clauseseq = f"-{u[i - 1][0] + 1} {u[i][0] + 1} 0\n"
             fout.write(clauseseq)
-            clauseseq = (
-                f"-{x[i] + 1} -{u[i - 1][k - 1] + 1} 0\n"
-            )
+            clauseseq = f"-{x[i] + 1} -{u[i - 1][k - 1] + 1} 0\n"
             fout.write(clauseseq)
         for j in range(1, k):
             for i in range(1, n - 1):
-                clauseseq = (
-                    f"-{x[i] + 1} -{u[i - 1][j - 1] + 1} {u[i][j] + 1} 0\n"
-                )
+                clauseseq = f"-{x[i] + 1} -{u[i - 1][j - 1] + 1} {u[i][j] + 1} 0\n"
                 fout.write(clauseseq)
-                clauseseq = (
-                    f"-{u[i - 1][j] + 1} {u[i][j] + 1} 0\n"
-                )
+                clauseseq = f"-{u[i - 1][j] + 1} {u[i][j] + 1} 0\n"
                 fout.write(clauseseq)
-        clauseseq = (
-            f"-{x[n - 1] + 1} -{u[n - 2][k - 1] + 1} 0\n"
-        )
+        clauseseq = f"-{x[n - 1] + 1} -{u[n - 2][k - 1] + 1} 0\n"
         fout.write(clauseseq)
     if k == 0:
         for i in range(n):
@@ -95,26 +85,18 @@ def GenMatsuiConstraint(x, u, n, k, left, right, m, fout):
     if m > 0:
         if (left == 0) and (right < n - 1):
             for i in range(1, right + 1):
-                clauseseq = (
-                    f"-{x[i] + 1} -{u[i - 1][m - 1] + 1} 0\n"
-                )
+                clauseseq = f"-{x[i] + 1} -{u[i - 1][m - 1] + 1} 0\n"
                 fout.write(clauseseq)
         if (left > 0) and (right == n - 1):
             for i in range(0, k - m):
-                clauseseq = (
-                    f"{u[left - 1][i] + 1} -{u[right - 1][i + m] + 1} 0\n"
-                )
+                clauseseq = f"{u[left - 1][i] + 1} -{u[right - 1][i + m] + 1} 0\n"
                 fout.write(clauseseq)
             for i in range(0, k - m + 1):
-                clauseseq = (
-                    f"{u[left - 1][i] + 1} -{x[right] + 1} -{u[right - 1][i + m - 1] + 1} 0\n"
-                )
+                clauseseq = f"{u[left - 1][i] + 1} -{x[right] + 1} -{u[right - 1][i + m - 1] + 1} 0\n"
                 fout.write(clauseseq)
         if (left > 0) and (right < n - 1):
             for i in range(0, k - m):
-                clauseseq = (
-                    f"{u[left - 1][i] + 1} -{u[right][i + m] + 1} 0\n"
-                )
+                clauseseq = f"{u[left - 1][i] + 1} -{u[right][i + m] + 1} 0\n"
                 fout.write(clauseseq)
     if m == 0:
         for i in range(left, right + 1):
@@ -200,9 +182,7 @@ def Decision(Round, Probability, MatsuiRoundIndex, MatsuiCount, flag):
             PartialCardinalityCons,
             count_clause_num,
         )
-    file = open(
-        f"Problem-Round{Round}-Probability{Probability}.cnf", "w"
-    )
+    file = open(f"Problem-Round{Round}-Probability{Probability}.cnf", "w")
     file.write(f"p cnf {count_var_num} {count_clause_num}\n")
     # Add constraints to claim nonzero input difference
     clauseseq = ""
@@ -266,19 +246,13 @@ def Decision(Round, Probability, MatsuiRoundIndex, MatsuiCount, flag):
         )
     file.close()
     # Call solver cadical
-    order = (
-        f"~/b/cadical/build/cadical Problem-Round{Round}-Probability{Probability}.cnf > Round{Round}-Probability{Probability}-solution.out"
-    )
-    os.system(order)
+    order = f"~/b/cadical/build/cadical Problem-Round{Round}-Probability{Probability}.cnf > Round{Round}-Probability{Probability}-solution.out"
+    Popen(order, shell=True).wait()
     # Extracting results
-    order = (
-        f"sed -n '/s SATISFIABLE/p' Round{Round}-Probability{Probability}-solution.out > SatSolution.out"
-    )
-    os.system(order)
-    order = (
-        f"sed -n '/s UNSATISFIABLE/p' Round{Round}-Probability{Probability}-solution.out > UnsatSolution.out"
-    )
-    os.system(order)
+    order = f"sed -n '/s SATISFIABLE/p' Round{Round}-Probability{Probability}-solution.out > SatSolution.out"
+    Popen(order, shell=True).wait()
+    order = f"sed -n '/s UNSATISFIABLE/p' Round{Round}-Probability{Probability}-solution.out > UnsatSolution.out"
+    Popen(order, shell=True).wait()
     satsol = open("SatSolution.out")
     unsatsol = open("UnsatSolution.out")
     satresult = satsol.readlines()
@@ -290,12 +264,12 @@ def Decision(Round, Probability, MatsuiRoundIndex, MatsuiCount, flag):
     if (len(satresult) > 0) and (len(unsatresult) == 0):
         flag = True
     order = "rm SatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     order = "rm UnsatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     # Removing cnf file
     order = f"rm Problem-Round{Round}-Probability{Probability}.cnf"
-    os.system(order)
+    Popen(order, shell=True).wait()
     time_end = time.time()
     # Printing solutions
     if flag:
@@ -327,9 +301,7 @@ for totalround in range(SearchRoundStart, SearchRoundEnd):
                 MatsuiCount += 1
     # Printing Matsui conditions
     file = open("MatsuiCondition.out", "a")
-    resultseq = (
-        f"Round: {totalround}; Partial Constraint Num: {MatsuiCount}\n"
-    )
+    resultseq = f"Round: {totalround}; Partial Constraint Num: {MatsuiCount}\n"
     file.write(resultseq)
     file.write(f"{MatsuiRoundIndex}\n")
     file.close()
@@ -341,9 +313,7 @@ for totalround in range(SearchRoundStart, SearchRoundEnd):
     DifferentialProbabilityBound[totalround] = CountProbability - 1
     time_end = time.time()
     file = open("RunTimeSummarise.out", "a")
-    resultseq = (
-        f"Round: {totalround}; Differential Probability: {DifferentialProbabilityBound[totalround]}; Runtime: {time_end - time_start}\n"
-    )
+    resultseq = f"Round: {totalround}; Differential Probability: {DifferentialProbabilityBound[totalround]}; Runtime: {time_end - time_start}\n"
     file.write(resultseq)
     file.close()
 print(str(DifferentialProbabilityBound))

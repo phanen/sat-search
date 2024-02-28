@@ -121,3 +121,13 @@ SymbolicCNFConstraintForSbox43 = [  # Differential PRESENT (43)
     [9, 9, 9, 9, 9, 9, 9, 1, 0],
     [1, 9, 9, 9, 9, 9, 9, 9, 0],
 ]
+
+
+def CountClausesInSequentialEncoding(main_var_num, cardinalitycons, clause_num):
+    count = clause_num
+    n = main_var_num
+    k = cardinalitycons
+    if k > 0:
+        return count + 1 + (k - 1) + (n - 2) * 3 + (k - 1) * (n - 2) * 2 + 1
+    if k == 0:
+        return count + n

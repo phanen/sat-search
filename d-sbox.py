@@ -1,7 +1,7 @@
-import os
 import time
+from subprocess import Popen
 
-from common import P, SymbolicCNFConstraintForSbox43
+from common import *
 
 FullRound = 32
 
@@ -19,16 +19,6 @@ DiffActiveSbox = FullRound * [0]
 
 def CountClausesInRoundFunction(Round, clause_num):
     return clause_num + 1 + Round * 16 * 43
-
-
-def CountClausesInSequentialEncoding(main_var_num, cardinalitycons, clause_num):
-    count = clause_num
-    n = main_var_num
-    k = cardinalitycons
-    if k > 0:
-        return count + 1 + (k - 1) + (n - 2) * 3 + (k - 1) * (n - 2) * 2 + 1
-    if k == 0:
-        return count + n
 
 
 def CountClausesForMatsuiStrategy(n, k, l, r, m, clausenum):
@@ -230,11 +220,11 @@ def Decision(Round, ActiveSbox, MatsuiRoundIndex, MatsuiCount, flag):
         )
     file.close()
     order = f"~/b/cadical/build/cadical Problem-Round{Round}-Active{ActiveSbox}.cnf > Round{Round}-Active{ActiveSbox}-solution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     order = f"sed -n '/s SATISFIABLE/p' Round{Round}-Active{ActiveSbox}-solution.out > SatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     order = f"sed -n '/s UNSATISFIABLE/p' Round{Round}-Active{ActiveSbox}-solution.out > UnsatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     satsol = open("SatSolution.out")
     unsatsol = open("UnsatSolution.out")
     satresult = satsol.readlines()
@@ -246,12 +236,12 @@ def Decision(Round, ActiveSbox, MatsuiRoundIndex, MatsuiCount, flag):
     if (len(satresult) > 0) and (len(unsatresult) == 0):
         flag = True
     order = "rm SatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     order = "rm UnsatSolution.out"
-    os.system(order)
+    Popen(order, shell=True).wait()
     # Removing cnf file
     order = f"rm Problem-Round{Round}-Active{ActiveSbox}.cnf"
-    os.system(order)
+    Popen(order, shell=True).wait()
     time_end = time.time()
     # Printing solutions
     if flag == True:
