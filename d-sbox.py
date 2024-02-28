@@ -1,12 +1,11 @@
 import time
-from subprocess import Popen
 
 from common import *
 
 FullRound = 32
 
 SearchRoundStart = 1
-SearchRoundEnd = 32
+SearchRoundEnd = 8
 InitialLowerBound = 0
 
 GroupConstraintChoice = 1
@@ -17,278 +16,213 @@ GroupNumForChoice1 = 1
 DiffActiveSbox = FullRound * [0]
 
 
-def CountClausesInRoundFunction(Round, clause_num):
-    return clause_num + 1 + Round * 16 * 43
+def CountClausesInRoundFunction(Round):
+    return 1 + Round * 16 * 43
 
 
-def CountClausesForMatsuiStrategy(n, k, l, r, m, clausenum):
-    count = clausenum
-    if m > 0:
-        if (l == 0) and (r < n - 1):
-            for _ in range(1, r + 1):
-                count += 1
-        if (l > 0) and (r == n - 1):
-            for _ in range(0, k - m):
-                count += 1
-            for _ in range(0, k - m + 1):
-                count += 1
-        if (l > 0) and (r < n - 1):
-            for _ in range(0, k - m):
-                count += 1
-    if m == 0:
-        for _ in range(l, r + 1):
-            count += 1
-    return count
-
-
-def GenSequentialEncoding(x, u, main_var_num, cardinalitycons, fout):
+def GenSequentialEncoding(x, u, main_var_num, cardinalitycons, w):
     n = main_var_num
     k = cardinalitycons
     if k > 0:
-        clauseseq = f"-{x[0] + 1} {u[0][0] + 1} 0\n"
-        fout.write(clauseseq)
+        w(f"-{x[0] + 1} {u[0][0] + 1} 0\n")
         for j in range(1, k):
-            clauseseq = f"-{u[0][j] + 1} 0\n"
-            fout.write(clauseseq)
+            w(f"-{u[0][j] + 1} 0\n")
         for i in range(1, n - 1):
-            clauseseq = f"-{x[i] + 1} {u[i][0] + 1} 0\n"
-            fout.write(clauseseq)
-            clauseseq = f"-{u[i - 1][0] + 1} {u[i][0] + 1} 0\n"
-            fout.write(clauseseq)
-            clauseseq = f"-{x[i] + 1} -{u[i - 1][k - 1] + 1} 0\n"
-            fout.write(clauseseq)
+            w(f"-{x[i] + 1} {u[i][0] + 1} 0\n")
+            w(f"-{u[i - 1][0] + 1} {u[i][0] + 1} 0\n")
+            w(f"-{x[i] + 1} -{u[i - 1][k - 1] + 1} 0\n")
         for j in range(1, k):
             for i in range(1, n - 1):
-                clauseseq = f"-{x[i] + 1} -{u[i - 1][j - 1] + 1} {u[i][j] + 1} 0\n"
-                fout.write(clauseseq)
-                clauseseq = f"-{u[i - 1][j] + 1} {u[i][j] + 1} 0\n"
-                fout.write(clauseseq)
-        clauseseq = f"-{x[n - 1] + 1} -{u[n - 2][k - 1] + 1} 0\n"
-        fout.write(clauseseq)
+                w(f"-{x[i] + 1} -{u[i - 1][j - 1] + 1} {u[i][j] + 1} 0\n")
+                w(f"-{u[i - 1][j] + 1} {u[i][j] + 1} 0\n")
+        w(f"-{x[n - 1] + 1} -{u[n - 2][k - 1] + 1} 0\n")
     if k == 0:
         for i in range(n):
-            clauseseq = f"-{x[i] + 1} 0\n"
-            fout.write(clauseseq)
+            w(f"-{x[i] + 1} 0\n")
 
 
-def GenMatsuiConstraint(x, u, n, k, left, right, m, fout):
+def GenMatsuiConstraint(x, u, n, k, l, r, m, w):
     if m > 0:
-        if (left == 0) and (right < n - 1):
-            for i in range(1, right + 1):
-                clauseseq = f"-{x[i] + 1} -{u[i - 1][m - 1] + 1} 0\n"
-                fout.write(clauseseq)
-        if (left > 0) and (right == n - 1):
-            for i in range(0, k - m):
-                clauseseq = f"{u[left - 1][i] + 1} -{u[right - 1][i + m] + 1} 0\n"
-                fout.write(clauseseq)
-            for i in range(0, k - m + 1):
-                clauseseq = f"{u[left - 1][i] + 1} -{x[right] + 1} -{u[right - 1][i + m - 1] + 1} 0\n"
-                fout.write(clauseseq)
-        if (left > 0) and (right < n - 1):
-            for i in range(0, k - m):
-                clauseseq = f"{u[left - 1][i] + 1} -{u[right][i + m] + 1} 0\n"
-                fout.write(clauseseq)
+        if l == 0 and r < n - 1:
+            for i in range(1, r + 1):
+                w(f"-{x[i] + 1} -{u[i - 1][m - 1] + 1} 0\n")
+        if l > 0 and r == n - 1:
+            for i in range(k - m):
+                w(f"{u[l - 1][i] + 1} -{u[r - 1][i + m] + 1} 0\n")
+            for i in range(k - m + 1):
+                w((f"{u[l - 1][i] + 1} -{x[r] + 1} -{u[r - 1][i + m - 1] + 1} 0\n"))
+        if l > 0 and r < n - 1:
+            for i in range(k - m):
+                w(f"{u[l - 1][i] + 1} -{u[r][i + m] + 1} 0\n")
     if m == 0:
-        for i in range(left, right + 1):
-            clauseseq = f"-{x[i] + 1} 0\n"
-            fout.write(clauseseq)
+        for i in range(l, r + 1):
+            w(f"-{x[i] + 1} 0\n")
 
 
-def Decision(Round, ActiveSbox, MatsuiRoundIndex, MatsuiCount, flag):
-    TotalSbox = 16 * Round
-    count_var_num = 0
-    time_start = time.time()
-    # Declare variables
-    xin = []
-    w = []
-    xout = []
-    for i in range(Round):
-        xin.append([])
-        w.append([])
-        xout.append([])
-        for j in range(64):
-            xin[i].append(0)
-        for j in range(16):
-            w[i].append(0)
-        for j in range(64):
-            xout[i].append(0)
+def cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount):
+    totalSbox = 16 * round
+    count_var = 0
+    xin = [64 * [0] for _ in range(round)]
+    w = [16 * [0] for _ in range(round)]
+    xout = [64 * [0] for _ in range(round)]
     # Allocate variables
-    for i in range(Round):
+    for i in range(round):
         for j in range(64):
-            xin[i][j] = count_var_num
-            count_var_num += 1
+            xin[i][j] = count_var
+            count_var += 1
         for j in range(16):
-            w[i][j] = count_var_num
-            count_var_num += 1
-    for i in range(Round - 1):
+            w[i][j] = count_var
+            count_var += 1
+    for i in range(round - 1):
         for j in range(64):
             xout[i][j] = xin[i + 1][j]
     for i in range(64):
-        xout[Round - 1][i] = count_var_num
-        count_var_num += 1
-    auxiliary_var_u = []
-    for i in range(TotalSbox - 1):
-        auxiliary_var_u.append([])
-        for j in range(ActiveSbox):
-            auxiliary_var_u[i].append(count_var_num)
-            count_var_num += 1
+        xout[round - 1][i] = count_var
+        count_var += 1
+    var_u = []
+    for i in range(totalSbox - 1):
+        var_u.append([])
+        for j in range(activeSbox):
+            var_u[i].append(count_var)
+            count_var += 1
+
     # Count the number of clauses in the round function
-    count_clause_num = 0
-    count_clause_num = CountClausesInRoundFunction(Round, count_clause_num)
+    count_clause = CountClausesInRoundFunction(round)
     # Count the number of clauses in the original sequential encoding
-    Main_Var_Num = 16 * Round
-    CardinalityCons = ActiveSbox
-    count_clause_num = CountClausesInSequentialEncoding(
-        Main_Var_Num, CardinalityCons, count_clause_num
-    )
+    mainVarNum = 16 * round
+    cardinalityCons = activeSbox
+    count_clause += CountClausesInSequentialEncoding(mainVarNum, cardinalityCons)
     # Count the number of clauses for Matsui's strategy
-    for matsui_count in range(0, MatsuiCount):
-        StartingRound = MatsuiRoundIndex[matsui_count][0]
-        EndingRound = MatsuiRoundIndex[matsui_count][1]
-        LeftNode = 16 * StartingRound
-        RightNode = 16 * EndingRound - 1
-        PartialCardinalityCons = (
-            ActiveSbox
+    for matsui_count in range(matsuiCount):
+        StartingRound = matsuiRoundIndex[matsui_count][0]
+        EndingRound = matsuiRoundIndex[matsui_count][1]
+        leftNode = 16 * StartingRound
+        rightNode = 16 * EndingRound - 1
+        partialCardinalityCons = (
+            activeSbox
             - DiffActiveSbox[StartingRound]
-            - DiffActiveSbox[Round - EndingRound]
+            - DiffActiveSbox[round - EndingRound]
         )
-        count_clause_num = CountClausesForMatsuiStrategy(
-            Main_Var_Num,
-            CardinalityCons,
-            LeftNode,
-            RightNode,
-            PartialCardinalityCons,
-            count_clause_num,
+        count_clause += CountClausesForMatsuiStrategy(
+            mainVarNum,
+            cardinalityCons,
+            leftNode,
+            rightNode,
+            partialCardinalityCons,
         )
-    file = open(f"Problem-Round{Round}-Active{ActiveSbox}.cnf", "w")
-    file.write(f"p cnf {count_var_num} {count_clause_num}\n")
-    # Add constraints to claim nonzero input difference
-    clauseseq = ""
-    for i in range(64):
-        clauseseq += f"{xin[0][i] + 1} "
-    clauseseq += f"0\n"
-    file.write(clauseseq)
-    # Add constraints for the round function
-    for r in range(Round):
-        y = list([])
+    with open(f"Round{round}-Active{activeSbox}.cnf", "w") as file:
+        file.write(f"p cnf {count_var} {count_clause}\n")
+        # Add constraints to claim nonzero input difference
+        clauseseq = ""
         for i in range(64):
-            y += [xout[r][P[i]]]
-        for i in range(16):
-            for j in range(43):
-                X = list([])
-                for k in range(4):
-                    X += [xin[r][4 * i + k]]
-                for k in range(4):
-                    X += [y[4 * i + k]]
-                X += [w[r][i]]
-                clauseseq = ""
-                for k in range(9):
-                    if SymbolicCNFConstraintForSbox43[j][k] == 1:
-                        clauseseq += f"-{X[k] + 1} "
-                    if SymbolicCNFConstraintForSbox43[j][k] == 0:
-                        clauseseq += f"{X[k] + 1} "
-                clauseseq += f"0\n"
-                file.write(clauseseq)
-    # Add constraints for the original sequential encoding
-    Main_Vars = list([])
-    for r in range(Round):
-        for i in range(16):
-            Main_Vars += [w[Round - 1 - r][i]]
-    GenSequentialEncoding(
-        Main_Vars, auxiliary_var_u, Main_Var_Num, CardinalityCons, file
+            clauseseq += f"{xin[0][i] + 1} "
+        clauseseq += f"0\n"
+        file.write(clauseseq)
+        # Add constraints for the round function
+        for r in range(round):
+            y = []
+            for i in range(64):
+                y += [xout[r][P[i]]]
+            for i in range(16):
+                for j in range(43):
+                    X = []
+                    for k in range(4):
+                        X += [xin[r][4 * i + k]]
+                    for k in range(4):
+                        X += [y[4 * i + k]]
+                    X += [w[r][i]]
+                    clauseseq = ""
+                    for k in range(9):
+                        if SymbolicCNFConstraintForSbox43[j][k] == 1:
+                            clauseseq += f"-{X[k] + 1} "
+                        if SymbolicCNFConstraintForSbox43[j][k] == 0:
+                            clauseseq += f"{X[k] + 1} "
+                    clauseseq += f"0\n"
+                    file.write(clauseseq)
+        # Add constraints for the original sequential encoding
+        main_vars = []
+        for r in range(round):
+            for i in range(16):
+                main_vars += [w[round - 1 - r][i]]
+        GenSequentialEncoding(main_vars, var_u, mainVarNum, cardinalityCons, file.write)
+        # Add constraints for Matsui's strategy
+        for matsui_count in range(matsuiCount):
+            StartingRound = matsuiRoundIndex[matsui_count][0]
+            EndingRound = matsuiRoundIndex[matsui_count][1]
+            leftNode = 16 * StartingRound
+            rightNode = 16 * EndingRound - 1
+            partialCardinalityCons = (
+                activeSbox
+                - DiffActiveSbox[StartingRound]
+                - DiffActiveSbox[round - EndingRound]
+            )
+            GenMatsuiConstraint(
+                main_vars,
+                var_u,
+                mainVarNum,
+                cardinalityCons,
+                leftNode,
+                rightNode,
+                partialCardinalityCons,
+                file.write,
+            )
+
+
+# T = 0
+def Decision(round, activeSbox, matsuiRoundIndex, matsuiCount):
+    # time_start = time.time()
+    cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount)
+    # time_end = time.time()
+    # p(f"cnf: {time_end-time_start}")
+    # global T
+    # T += time_end - time_start
+
+    time_start = time.time()
+    flag = satsolver(
+        f"Round{round}-Active{activeSbox}.cnf",
+        f"Round{round}-Active{activeSbox}.out",
     )
-    # Add constraints for Matsui's strategy
-    for matsui_count in range(0, MatsuiCount):
-        StartingRound = MatsuiRoundIndex[matsui_count][0]
-        EndingRound = MatsuiRoundIndex[matsui_count][1]
-        LeftNode = 16 * StartingRound
-        RightNode = 16 * EndingRound - 1
-        PartialCardinalityCons = (
-            ActiveSbox
-            - DiffActiveSbox[StartingRound]
-            - DiffActiveSbox[Round - EndingRound]
-        )
-        GenMatsuiConstraint(
-            Main_Vars,
-            auxiliary_var_u,
-            Main_Var_Num,
-            CardinalityCons,
-            LeftNode,
-            RightNode,
-            PartialCardinalityCons,
-            file,
-        )
-    file.close()
-    order = f"~/b/cadical/build/cadical Problem-Round{Round}-Active{ActiveSbox}.cnf > Round{Round}-Active{ActiveSbox}-solution.out"
-    Popen(order, shell=True).wait()
-    order = f"sed -n '/s SATISFIABLE/p' Round{Round}-Active{ActiveSbox}-solution.out > SatSolution.out"
-    Popen(order, shell=True).wait()
-    order = f"sed -n '/s UNSATISFIABLE/p' Round{Round}-Active{ActiveSbox}-solution.out > UnsatSolution.out"
-    Popen(order, shell=True).wait()
-    satsol = open("SatSolution.out")
-    unsatsol = open("UnsatSolution.out")
-    satresult = satsol.readlines()
-    unsatresult = unsatsol.readlines()
-    satsol.close()
-    unsatsol.close()
-    if (len(satresult) == 0) and (len(unsatresult) > 0):
-        flag = False
-    if (len(satresult) > 0) and (len(unsatresult) == 0):
-        flag = True
-    order = "rm SatSolution.out"
-    Popen(order, shell=True).wait()
-    order = "rm UnsatSolution.out"
-    Popen(order, shell=True).wait()
-    # Removing cnf file
-    order = f"rm Problem-Round{Round}-Active{ActiveSbox}.cnf"
-    Popen(order, shell=True).wait()
     time_end = time.time()
-    # Printing solutions
-    if flag == True:
-        print(
-            f"Round:{Round}; Active: {ActiveSbox}; Sat; TotalCost: {time_end - time_start}"
-        )
-    else:
-        print(
-            f"Round:{Round}; Active: {ActiveSbox}; UnSat; TotalCost: {time_end - time_start}"
-        )
+    p(
+        f"Round: {round}; Active: {activeSbox:2}; {'Sat' if flag == True else 'UnSat':>5}; Cost: {time_end - time_start}"
+    )
     return flag
 
 
 # main function
-CountSbox = InitialLowerBound
+countSbox = InitialLowerBound
 TotalTimeStart = time.time()
 for totalround in range(SearchRoundStart, SearchRoundEnd):
-    flag = False
     time_start = time.time()
-    MatsuiRoundIndex = []
-    MatsuiCount = 0
+    flag = False
+    matsuiRoundIndex = []
+    matsuiCount = 0
     # Generate Matsui condition under choice 1
     if GroupConstraintChoice == 1:
-        for group in range(0, GroupNumForChoice1):
+        for group in range(GroupNumForChoice1):
             for round in range(1, totalround - group + 1):
-                MatsuiRoundIndex.append([])
-                MatsuiRoundIndex[MatsuiCount].append(group)
-                MatsuiRoundIndex[MatsuiCount].append(group + round)
-                MatsuiCount += 1
+                matsuiRoundIndex.append([])
+                matsuiRoundIndex[matsuiCount].append(group)
+                matsuiRoundIndex[matsuiCount].append(group + round)
+                matsuiCount += 1
     # Printing Matsui conditions
-    file = open("MatsuiCondition.out", "a")
-    resultseq = f"Round: {totalround}; Partial Constraint Num: {MatsuiCount}\n"
-    file.write(resultseq)
-    file.write(f"{MatsuiRoundIndex}\n")
-    file.close()
+    with open("MatsuiCondition.out", "a") as file:
+        resultseq = f"Round: {totalround}; Partial Constraint Num: {matsuiCount}\n"
+        file.write(resultseq)
+        file.write(f"{matsuiRoundIndex}\n")
     while flag == False:
-        flag = Decision(totalround, CountSbox, MatsuiRoundIndex, MatsuiCount, flag)
-        CountSbox += 1
-    DiffActiveSbox[totalround] = CountSbox - 1
+        flag = Decision(totalround, countSbox, matsuiRoundIndex, matsuiCount)
+        countSbox += 1
+    DiffActiveSbox[totalround] = countSbox - 1
     time_end = time.time()
-    file = open("RunTimeSummarise.out", "a")
-    resultseq = f"Round: {totalround}; Active S-box: {DiffActiveSbox[totalround]}; Runtime: {time_end - time_start}\n"
-    file.write(resultseq)
-    file.close()
-print(DiffActiveSbox)
+    with open("RunTimeSummarise.out", "a") as file:
+        file.write(
+            f"Round: {totalround}; Active S-box: {DiffActiveSbox[totalround]}; Runtime: {time_end - time_start}\n"
+        )
+
 TotalTimeEnd = time.time()
-print(f"Total Runtime: {TotalTimeEnd - TotalTimeStart}")
-file = open("RunTimeSummarise.out", "a")
-resultseq = f"Total Runtime: {TotalTimeEnd - TotalTimeStart}"
-file.write(resultseq)
+p(DiffActiveSbox)
+p(f"Total Runtime: {TotalTimeEnd - TotalTimeStart}")
+# p(T)
+with open("RunTimeSummarise.out", "a") as file:
+    file.write(f"Total Runtime: {TotalTimeEnd - TotalTimeStart}\n\n")

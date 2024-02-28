@@ -1,3 +1,64 @@
+import os
+import re
+from subprocess import DEVNULL, Popen
+
+VERBOSE = 1
+SATOUTPUT = 1
+p = print if VERBOSE else lambda *args: None
+
+CADICAL_PATH = f"{os.environ['HOME']}/b/cadical/build/cadical"
+
+
+def satsolver(ifilename, ofilename):
+    # https://github.com/arminbiere/cadical/blob/e71bd58937e6513f71bd8c93d91578785c592721/src/cadical.hpp#L478
+    with open(ofilename, "+w") as f:
+        out = f if SATOUTPUT else DEVNULL
+        child = Popen([CADICAL_PATH, "-q", ifilename], stdout=out)
+        child.wait()
+        return child.returncode == 10
+
+
+def CountClausesInSequentialEncoding(main_var_num, cardinalitycons):
+    count = 0
+    n = main_var_num
+    k = cardinalitycons
+    if k > 0:
+        return count + 1 + (k - 1) + (n - 2) * 3 + (k - 1) * (n - 2) * 2 + 1
+    if k == 0:
+        return count + n
+
+
+def frl(path):
+    with open(path) as f:
+        return f.readlines()
+
+
+def grep(pattern, path):
+    with open(path) as f:
+        content = f.read()
+    return re.match(pattern, content)
+
+
+def CountClausesForMatsuiStrategy(n, k, l, r, m):
+    count = 0
+    if m > 0:
+        if (l == 0) and (r < n - 1):
+            for _ in range(1, r + 1):
+                count += 1
+        elif (l > 0) and (r == n - 1):
+            for _ in range(0, k - m):
+                count += 1
+            for _ in range(0, k - m + 1):
+                count += 1
+        elif (l > 0) and (r < n - 1):
+            for _ in range(0, k - m):
+                count += 1
+    if m == 0:
+        for _ in range(l, r + 1):
+            count += 1
+    return count
+
+
 # fmt: off
 P = [
     0, 16, 32, 48,
@@ -121,13 +182,4 @@ SymbolicCNFConstraintForSbox43 = [  # Differential PRESENT (43)
     [9, 9, 9, 9, 9, 9, 9, 1, 0],
     [1, 9, 9, 9, 9, 9, 9, 9, 0],
 ]
-
-
-def CountClausesInSequentialEncoding(main_var_num, cardinalitycons, clause_num):
-    count = clause_num
-    n = main_var_num
-    k = cardinalitycons
-    if k > 0:
-        return count + 1 + (k - 1) + (n - 2) * 3 + (k - 1) * (n - 2) * 2 + 1
-    if k == 0:
-        return count + n
+# fmt:on
