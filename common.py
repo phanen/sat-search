@@ -8,6 +8,7 @@ p = print if VERBOSE else lambda *args: None
 
 CADICAL_PATH = f"{os.environ['HOME']}/b/cadical/build/cadical"
 TIME_PATH = "RunTimeSummarise.out"
+MATSUICONDITION_PATH = "MatsuiCondition.out"
 
 
 def satsolver(ifilename, ofilename):
@@ -19,19 +20,15 @@ def satsolver(ifilename, ofilename):
         return child.returncode == 10
 
 
-def CountClausesInSequentialEncoding(main_var_num, cardinalitycons):
-    count = 0
-    n = main_var_num
-    k = cardinalitycons
+def CountClausesInSequentialEncoding(n, k):
+    """
+    n: mainVarNum
+    k: cardinalitycons
+    """
     if k > 0:
-        return count + 1 + (k - 1) + (n - 2) * 3 + (k - 1) * (n - 2) * 2 + 1
-    if k == 0:
-        return count + n
-
-
-def frl(path):
-    with open(path) as f:
-        return f.readlines()
+        return 1 + (k - 1) + (n - 2) * 3 + (k - 1) * (n - 2) * 2 + 1
+    else:
+        return n
 
 
 def grep(pattern, path):
