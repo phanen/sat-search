@@ -59,13 +59,12 @@ def GenMatsuiConstraint(x, u, n, k, l, r, m, w):
             w(f"-{x[i] + 1} 0\n")
 
 
-def cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount):
+def cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount, cnffile):
     totalSbox = 16 * round
     count_var = 0
     xin = [64 * [0] for _ in range(round)]
     w = [16 * [0] for _ in range(round)]
     xout = [64 * [0] for _ in range(round)]
-    # Allocate variables
     for i in range(round):
         for j in range(64):
             xin[i][j] = count_var
@@ -86,13 +85,10 @@ def cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount):
             var_u[i].append(count_var)
             count_var += 1
 
-    # Count the number of clauses in the round function
     count_clause = CountClausesInRoundFunction(round)
-    # Count the number of clauses in the original sequential encoding
     mainVarNum = 16 * round
     cardinalityCons = activeSbox
     count_clause += CountClausesInSequentialEncoding(mainVarNum, cardinalityCons)
-    # Count the number of clauses for Matsui's strategy
     for matsui_count in range(matsuiCount):
         StartingRound = matsuiRoundIndex[matsui_count][0]
         EndingRound = matsuiRoundIndex[matsui_count][1]
@@ -110,7 +106,8 @@ def cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount):
             rightNode,
             partialCardinalityCons,
         )
-    with open(f"Round{round}-Active{activeSbox}.cnf", "w") as file:
+
+    with open(cnffile, "w") as file:
         file.write(f"p cnf {count_var} {count_clause}\n")
         # Add constraints to claim nonzero input difference
         clauseseq = ""
@@ -168,33 +165,11 @@ def cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount):
             )
 
 
-# T = 0
-def Decision(round, activeSbox, matsuiRoundIndex, matsuiCount):
-    # time_start = time.time()
-    cnfbuilder(round, activeSbox, matsuiRoundIndex, matsuiCount)
-    # time_end = time.time()
-    # p(f"cnf: {time_end-time_start}")
-    # global T
-    # T += time_end - time_start
-
-    time_start = time.time()
-    flag = satsolver(
-        f"Round{round}-Active{activeSbox}.cnf",
-        f"Round{round}-Active{activeSbox}.out",
-    )
-    time_end = time.time()
-    p(
-        f"Round: {round}; Active: {activeSbox:2}; {'Sat' if flag == True else 'UnSat':>5}; Cost: {time_end - time_start}"
-    )
-    return flag
-
-
 # main function
 countSbox = InitialLowerBound
 TotalTimeStart = time.time()
 for totalround in range(SearchRoundStart, SearchRoundEnd):
     time_start = time.time()
-    flag = False
     matsuiRoundIndex = []
     matsuiCount = 0
     # Generate Matsui condition under choice 1
@@ -210,19 +185,34 @@ for totalround in range(SearchRoundStart, SearchRoundEnd):
         resultseq = f"Round: {totalround}; Partial Constraint Num: {matsuiCount}\n"
         file.write(resultseq)
         file.write(f"{matsuiRoundIndex}\n")
+    flag = False
     while flag == False:
-        flag = Decision(totalround, countSbox, matsuiRoundIndex, matsuiCount)
+        cnfbuilder(
+            round,
+            countSbox,
+            matsuiRoundIndex,
+            matsuiCount,
+            f"Round{round}-Active{countSbox}.cnf",
+        )
+        ts = time.time()
+        flag = satsolver(
+            f"Round{round}-Active{countSbox}.cnf",
+            f"Round{round}-Active{countSbox}.out",
+        )
+        te = time.time()
+        p(
+            f"Round: {round}; Active: {countSbox:2}; {'Sat' if flag == True else 'UnSat':>5}; Cost: {ts - te}"
+        )
         countSbox += 1
     DiffActiveSbox[totalround] = countSbox - 1
     time_end = time.time()
-    with open("RunTimeSummarise.out", "a") as file:
+    with open(TIME_PATH, "a") as file:
         file.write(
             f"Round: {totalround}; Active S-box: {DiffActiveSbox[totalround]}; Runtime: {time_end - time_start}\n"
         )
-
 TotalTimeEnd = time.time()
+
 p(DiffActiveSbox)
 p(f"Total Runtime: {TotalTimeEnd - TotalTimeStart}")
-# p(T)
-with open("RunTimeSummarise.out", "a") as file:
+with open(TIME_PATH, "a") as file:
     file.write(f"Total Runtime: {TotalTimeEnd - TotalTimeStart}\n\n")

@@ -7,6 +7,7 @@ SATOUTPUT = 1
 p = print if VERBOSE else lambda *args: None
 
 CADICAL_PATH = f"{os.environ['HOME']}/b/cadical/build/cadical"
+TIME_PATH = "RunTimeSummarise.out"
 
 
 def satsolver(ifilename, ofilename):
