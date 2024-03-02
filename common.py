@@ -36,7 +36,7 @@ def solver_builder(solver_name):
     solver_cmd = SOLVER.get(solver_name)
     if solver_cmd == None:
         exit("no such solver")
-    if os.access(solver_cmd[0], os.X_OK):
+    if not os.access(solver_cmd[0], os.X_OK):
         exit("not executable solver")
 
     def satsolver(ifilename, ofilename):
