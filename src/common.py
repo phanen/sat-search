@@ -1,5 +1,5 @@
 import os
-from subprocess import DEVNULL, PIPE, Popen
+from subprocess import DEVNULL, PIPE, Popen, run
 
 from const import *
 from utils import *
@@ -19,11 +19,13 @@ log = print if VERBOSE else lambda *_: None
 
 MATSUI = "MatsuiCondition.out"
 
-
+PROJ_ROOT = run(
+    ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
+).stdout.strip()
 SOLVER = {
-    "cadical": [os.path.expanduser("~/b/cadical/build/cadical"), "-q"],
-    "cryptominisat": [os.path.expanduser("~/b/cryptominisat/build/cryptominisat5")],
-    "kissat": [os.path.expanduser("~/b/kissat/build/kissat"), "-q"],
+    "cadical": [PROJ_ROOT + "/deps/cadical/build/cadical", "-q"],
+    "cryptominisat": [PROJ_ROOT + "./deps/cryptominisat/build/cryptominisat5"],
+    "kissat": [PROJ_ROOT + "/deps/kissat/build/kissat", "-q"],
 }
 
 SBVA = os.path.expanduser("~/b/SBVA/sbva")
