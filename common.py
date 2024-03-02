@@ -29,6 +29,7 @@ MATSUI_OUT = "MatsuiCondition.out"
 SOLVER = {
     "cadical": [os.path.expanduser("~/b/cadical/build/cadical"), "-q"],
     "cryptominisat": [os.path.expanduser("~/b/cryptominisat/build/cryptominisat5")],
+    "kissat": [os.path.expanduser("~/b/kissat/build/kissat"), "-q"],
 }
 
 
