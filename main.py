@@ -25,7 +25,9 @@ def run(args):
     satsolver = solver_builder(args.solver)
     cnfbuilder = cnfbuilders[(args.linear << 1) + args.prob]
     box = boxes[(args.linear << 1) + args.prob]
-    TIME = f"RunTimeSummarise-{'L' if args.linear else 'D'}-{'P' if args.prob else 'S'}-{args.solver}.out"
+
+    suffix = f"{'L' if args.linear else 'D'}-{'P' if args.prob else 'S'}-{args.solver}"
+    TIME = f"RunTimeSummarise-{suffix}.out"
 
     tf = open(TIME, "a")
     i = InitialLowerBound
@@ -33,20 +35,15 @@ def run(args):
     for round in range(SearchRoundStart, SearchRoundEnd):
         tick("round")
         matsuiRoundIndex, matsuiCount = matsui(round)
+        cnffile = f"R{round}-A{i}-{suffix}.cnf"
+        outfile = f"R{round}-A{i}-{suffix}.out"
         while True:
-            cnfbuilder(
-                round,
-                i,
-                matsuiRoundIndex,
-                matsuiCount,
-                box,
-                f"R{round}-A{i}.cnf",
-            )
+            cnfbuilder(round, i, matsuiRoundIndex, matsuiCount, box, cnffile)
             if args.sbva:
-                reduce_by_sbva(f"R{round}-A{i}.cnf")
+                reduce_by_sbva(cnffile)
 
             tick("sat")
-            flag = satsolver(f"R{round}-A{i}.cnf", f"R{round}-A{i}.out")
+            flag = satsolver(cnffile, outfile)
             tick("sat")
             log(f"\tRound: {round}; Active: {i:2}; {flag:1}; Cost: {cost('sat')}")
             i += 1
