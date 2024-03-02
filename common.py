@@ -1,7 +1,7 @@
 import os
 import re
 import time
-from subprocess import DEVNULL, Popen
+from subprocess import DEVNULL, PIPE, Popen
 
 FullRound = 32
 
@@ -19,7 +19,7 @@ DiffActiveSbox = FullRound * [0]
 
 
 VERBOSE = 1
-SATOUTPUT = 0
+SATOUTPUT = 1
 log = print if VERBOSE else lambda *_: None
 
 TIME_OUT = "RunTimeSummarise.out"
@@ -31,6 +31,8 @@ SOLVER = {
     "cryptominisat": [os.path.expanduser("~/b/cryptominisat/build/cryptominisat5")],
     "kissat": [os.path.expanduser("~/b/kissat/build/kissat"), "-q"],
 }
+
+SBVA = os.path.expanduser("~/b/SBVA/sbva")
 
 
 def solver_builder(solver_name):
@@ -50,9 +52,16 @@ def solver_builder(solver_name):
                 return True
             elif child.returncode == 20:
                 return False
-            exit("unkown solver error")
+            print("unkown solver error")
+            exit(child.returncode)
 
     return satsolver
+
+
+def reduce_by_sbva(filename):
+    out, _ = Popen([SBVA, "-i", filename], stdout=PIPE).communicate()
+    with open(filename, "wb") as f:
+        f.write(out)
 
 
 def clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount):

@@ -5,3 +5,6 @@ sat solvers
 * https://github.com/arminbiere/cadical
 * https://github.com/msoos/cryptominisat
 * https://github.com/arminbiere/kissat
+
+sat optimizer
+* https://github.com/hgarrereyn/SBVA

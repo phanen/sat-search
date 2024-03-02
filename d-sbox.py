@@ -22,6 +22,9 @@ def run(args):
                 SymbolicCNFConstraintForSbox,
                 f"R{round}-A{countSbox}.cnf",
             )
+            if args.sbva:
+                reduce_by_sbva(f"R{round}-A{countSbox}.cnf")
+
             tick("sat")
             flag = satsolver(f"R{round}-A{countSbox}.cnf", f"R{round}-A{countSbox}.out")
             tick("sat")
@@ -45,5 +48,6 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--solver", type=str, required=True)
+    parser.add_argument("--sbva", action="store_true")
     args = parser.parse_args()
     run(args)
