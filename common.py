@@ -6,7 +6,7 @@ from subprocess import DEVNULL, Popen
 FullRound = 32
 
 SearchRoundStart = 1
-SearchRoundEnd = 10
+SearchRoundEnd = 32
 InitialLowerBound = 0
 
 GroupConstraintChoice = 1
@@ -19,21 +19,39 @@ DiffActiveSbox = FullRound * [0]
 
 
 VERBOSE = 1
-SATOUTPUT = 1
+SATOUTPUT = 0
 log = print if VERBOSE else lambda *_: None
 
-CADICAL_EXE = os.path.expanduser("~/b/cadical/build/cadical")
 TIME_OUT = "RunTimeSummarise.out"
 MATSUI_OUT = "MatsuiCondition.out"
 
 
-def satsolver(ifilename, ofilename):
-    # https://github.com/arminbiere/cadical/blob/e71bd58937e6513f71bd8c93d91578785c592721/src/cadical.hpp#L478
-    with open(ofilename, "+w") as f:
-        out = f if SATOUTPUT else DEVNULL
-        child = Popen([CADICAL_EXE, "-q", ifilename], stdout=out)
-        child.wait()
-        return child.returncode == 10
+SOLVER = {
+    "cadical": [os.path.expanduser("~/b/cadical/build/cadical"), "-q"],
+    "cryptominisat": [os.path.expanduser("~/b/cryptominisat/build/cryptominisat5")],
+}
+
+
+def solver_builder(solver_name):
+    solver_cmd = SOLVER.get(solver_name)
+    if solver_cmd == None:
+        exit("no such solver")
+    if os.access(solver_cmd[0], os.X_OK):
+        exit("not executable solver")
+
+    def satsolver(ifilename, ofilename):
+        # https://github.com/arminbiere/cadical/blob/e71bd58937e6513f71bd8c93d91578785c592721/src/cadical.hpp#L478
+        with open(ofilename, "+w") as f:
+            out = f if SATOUTPUT else DEVNULL
+            child = Popen([*solver_cmd, ifilename], stdout=out, stderr=DEVNULL)
+            child.wait()
+            if child.returncode == 10:
+                return True
+            elif child.returncode == 20:
+                return False
+            exit("unkown solver error")
+
+    return satsolver
 
 
 def clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount):
