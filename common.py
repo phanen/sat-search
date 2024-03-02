@@ -6,7 +6,7 @@ from subprocess import DEVNULL, PIPE, Popen
 FullRound = 32
 
 SearchRoundStart = 1
-SearchRoundEnd = 32
+SearchRoundEnd = 10
 InitialLowerBound = 0
 
 GroupConstraintChoice = 1
@@ -17,6 +17,7 @@ GroupNumForChoice1 = 1
 # DiffActiveSbox
 DiffActiveSbox = FullRound * [0]
 
+DifferentialProbabilityBound = FullRound * [0]
 
 VERBOSE = 1
 SATOUTPUT = 1
@@ -64,9 +65,10 @@ def reduce_by_sbva(filename):
         f.write(out)
 
 
-def clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount):
+def clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount, box):
+
     def CountClausesInRoundFunction(round):
-        return 1 + round * 16 * 43
+        return 1 + round * 16 * len(box)
 
     def CountClausesInSequentialEncoding(n, k):
         """
@@ -183,7 +185,7 @@ def matsui(round):
     return matsuiRoundIndex, matsuiCount
 
 
-def cnfbuilder(
+def cnfbuilder_diff_sbox(
     round,
     activeSbox,
     matsuiRoundIndex,
@@ -219,7 +221,7 @@ def cnfbuilder(
     for r in range(round):
         y = [xo[r][P[i]] for i in range(64)]
         for i in range(16):
-            for j in range(43):
+            for j in range(len(SymbolicCNFConstraintForSbox)):
                 X = []
                 for k in range(4):
                     X.append(xi[r][4 * i + k])
@@ -259,11 +261,106 @@ def cnfbuilder(
             rightNode,
             partialCardinalityCons,
         )
-    with open(cnffile, "w") as file:
+    with open(cnffile, "w") as f:
         # count_clause = clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount)
         count_clause = "".join(seq).count("\n")
-        file.write(f"p cnf {count_var} {count_clause}\n")
-        file.write("".join(seq))
+        f.write(f"p cnf {count_var} {count_clause}\n")
+        f.write("".join(seq))
+
+
+def cnfbuilder_diff_prob(
+    round,
+    probability,
+    matsuiRoundIndex,
+    matsuiCount,
+    SymbolicCNFConstraintForSbox,
+    cnffile,
+):
+    xi = []  # 64
+    p = []  # 16
+    q = []
+    m = []
+    xo = []
+    totalProb = 16 * round * 3
+    count_var = 0
+    var_u = []
+    for i in range(round):
+        xi.append(list(range(count_var, count_var + 64)))
+        count_var += 64
+        p.append(list(range(count_var, count_var + 16)))
+        count_var += 16
+        q.append(list(range(count_var, count_var + 16)))
+        count_var += 16
+        m.append(list(range(count_var, count_var + 16)))
+        count_var += 16
+    for i in range(round - 1):
+        xo.append(xi[i + 1])
+    xo.append(list(range(count_var, count_var + 64)))
+    count_var += 64
+    for i in range(totalProb - 1):
+        var_u.append(range(count_var, count_var + probability))
+        count_var += probability
+
+    # Add constraints to claim nonzero input difference
+    seq = []
+    for i in range(64):
+        seq.append(f"{xi[0][i] + 1} ")
+    seq.append(f"0\n")
+    # Add constraints for the round function
+    for r in range(round):
+        y = [xo[r][P[i]] for i in range(64)]
+        for i in range(16):
+            for j in range(len(SymbolicCNFConstraintForSbox)):
+                X = []
+                for k in range(4):
+                    X.append(xi[r][4 * i + k])
+                for k in range(4):
+                    X.append(y[4 * i + k])
+                X.append(p[r][i])
+                X.append(q[r][i])
+                X.append(m[r][i])
+                for k in range(len(SymbolicCNFConstraintForSbox[0])):
+                    if SymbolicCNFConstraintForSbox[j][k] == 1:
+                        seq.append(f"-{X[k] + 1} ")
+                    if SymbolicCNFConstraintForSbox[j][k] == 0:
+                        seq.append(f"{X[k] + 1} ")
+                seq.append(f"0\n")
+
+    # Add constraints for the original sequential encoding
+    mainVars = []
+    for r in range(round):
+        for i in range(16):
+            mainVars.append(p[round - 1 - r][i])
+            mainVars.append(q[round - 1 - r][i])
+            mainVars.append(m[round - 1 - r][i])
+    mainVarNum = 16 * round * 3
+    cardinalityCons = probability
+    seq += GenSequentialEncoding(mainVars, var_u, mainVarNum, cardinalityCons)
+    # Add constraints for Matsui's strategy
+    for mc in range(matsuiCount):
+        StartRound = matsuiRoundIndex[mc][0]
+        EndRound = matsuiRoundIndex[mc][1]
+        leftNode = 16 * StartRound * 3
+        rightNode = 16 * EndRound * 3 - 1
+        partialCardinalityCons = (
+            probability
+            - DifferentialProbabilityBound[StartRound]
+            - DifferentialProbabilityBound[round - EndRound]
+        )
+        seq += GenMatsuiConstraint(
+            mainVars,
+            var_u,
+            mainVarNum,
+            cardinalityCons,
+            leftNode,
+            rightNode,
+            partialCardinalityCons,
+        )
+    with open(cnffile, "w") as f:
+        # count_clause = clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount)
+        count_clause = "".join(seq).count("\n")
+        f.write(f"p cnf {count_var} {count_clause}\n")
+        f.write("".join(seq))
 
 
 def grep(pattern, path):
