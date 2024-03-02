@@ -6,8 +6,10 @@ fmt:
 	isort ./*.py
 	black ./*.py
 
-benchmark:
-	hyperfine --warmup 5 'python d-sbox.py'
-	hyperfine --warmup 5 'python d-prob.py'
-	hyperfine --warmup 5 'python l-sbox.py'
-	hyperfine --warmup 5 'python l-bias.py'
+benchmark: cadical cryptominisat kissat
+
+cadical cryptominisat kissat:
+	python main.py -s $@
+	python main.py -s $@ -p
+	python main.py -s $@ -l
+	python main.py -s $@ -l -p

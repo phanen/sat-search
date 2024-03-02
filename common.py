@@ -17,7 +17,6 @@ VERBOSE = 1
 SATOUTPUT = 1
 log = print if VERBOSE else lambda *_: None
 
-TIME = "RunTimeSummarise.out"
 MATSUI = "MatsuiCondition.out"
 
 

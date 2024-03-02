@@ -25,6 +25,7 @@ def run(args):
     satsolver = solver_builder(args.solver)
     cnfbuilder = cnfbuilders[(args.linear << 1) + args.prob]
     box = boxes[(args.linear << 1) + args.prob]
+    TIME = f"RunTimeSummarise-{'L' if args.linear else 'D'}-{'P' if args.prob else 'S'}-{args.solver}.out"
 
     tf = open(TIME, "a")
     i = InitialLowerBound
