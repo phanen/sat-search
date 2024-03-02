@@ -1,30 +1,24 @@
 import os
-import re
-import time
 from subprocess import DEVNULL, PIPE, Popen
 
-FullRound = 32
-
-SearchRoundStart = 1
-SearchRoundEnd = 10
-InitialLowerBound = 0
+from const import *
+from utils import *
 
 GroupConstraintChoice = 1
+GroupNumForChoice1 = 1  # Parameters for choice 1
 
-# Parameters for choice 1
-GroupNumForChoice1 = 1
+FullRound = 32
+# DiffActiveSbox = FullRound * [0]
+# DifferentialProbabilityBound = FullRound * [0]
+Result = FullRound * [0]
 
-# DiffActiveSbox
-DiffActiveSbox = FullRound * [0]
-
-DifferentialProbabilityBound = FullRound * [0]
 
 VERBOSE = 1
 SATOUTPUT = 1
 log = print if VERBOSE else lambda *_: None
 
-TIME_OUT = "RunTimeSummarise.out"
-MATSUI_OUT = "MatsuiCondition.out"
+TIME = "RunTimeSummarise.out"
+MATSUI = "MatsuiCondition.out"
 
 
 SOLVER = {
@@ -34,7 +28,6 @@ SOLVER = {
 }
 
 SBVA = os.path.expanduser("~/b/SBVA/sbva")
-
 
 def solver_builder(solver_name):
     solver_cmd = SOLVER.get(solver_name)
@@ -109,7 +102,7 @@ def clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount, box):
         leftNode = 16 * StartRound
         rightNode = 16 * EndRound - 1
         partialCardinalityCons = (
-            activeSbox - DiffActiveSbox[StartRound] - DiffActiveSbox[round - EndRound]
+            activeSbox - Result[StartRound] - Result[round - EndRound]
         )
         count_clause += CountClausesForMatsuiStrategy(
             mainVarNum, cardinalityCons, leftNode, rightNode, partialCardinalityCons
@@ -176,7 +169,7 @@ def matsui(round):
                 matsuiRoundIndex.append([group, group + round])
                 matsuiCount += 1
     # Printing Matsui conditions
-    with open(MATSUI_OUT, "a") as file:
+    with open(MATSUI, "a") as file:
         resultseq = f"Round: {round}; Partial Constraint Num: {matsuiCount}\n"
         file.write(resultseq)
         file.write(f"{matsuiRoundIndex}\n")
@@ -245,12 +238,12 @@ def cnfbuilder_diff_sbox(
     seq += GenSequentialEncoding(mainVars, var_u, mainVarNum, cardinalityCons)
     # Add constraints for Matsui's strategy
     for mc in range(matsuiCount):
-        StartRound = matsuiRoundIndex[mc][0]
-        EndRound = matsuiRoundIndex[mc][1]
-        leftNode = 16 * StartRound
-        rightNode = 16 * EndRound - 1
+        startRound = matsuiRoundIndex[mc][0]
+        endRound = matsuiRoundIndex[mc][1]
+        leftNode = 16 * startRound
+        rightNode = 16 * endRound - 1
         partialCardinalityCons = (
-            activeSbox - DiffActiveSbox[StartRound] - DiffActiveSbox[round - EndRound]
+            activeSbox - Result[startRound] - Result[round - endRound]
         )
         seq += GenMatsuiConstraint(
             mainVars,
@@ -338,14 +331,12 @@ def cnfbuilder_diff_prob(
     seq += GenSequentialEncoding(mainVars, var_u, mainVarNum, cardinalityCons)
     # Add constraints for Matsui's strategy
     for mc in range(matsuiCount):
-        StartRound = matsuiRoundIndex[mc][0]
-        EndRound = matsuiRoundIndex[mc][1]
-        leftNode = 16 * StartRound * 3
-        rightNode = 16 * EndRound * 3 - 1
+        startround = matsuiRoundIndex[mc][0]
+        endround = matsuiRoundIndex[mc][1]
+        leftNode = 16 * startround * 3
+        rightNode = 16 * endround * 3 - 1
         partialCardinalityCons = (
-            probability
-            - DifferentialProbabilityBound[StartRound]
-            - DifferentialProbabilityBound[round - EndRound]
+            probability - Result[startround] - Result[round - endround]
         )
         seq += GenMatsuiConstraint(
             mainVars,
@@ -362,153 +353,84 @@ def cnfbuilder_diff_prob(
         f.write(f"p cnf {count_var} {count_clause}\n")
         f.write("".join(seq))
 
+def cnfbuilder_diff_sbox(
+    round,
+    activeSbox,
+    matsuiRoundIndex,
+    matsuiCount,
+    SymbolicCNFConstraintForSbox,
+    cnffile,
+):
+    xi = []
+    w = []
+    xo = []
+    totalSbox = 16 * round
+    count_var = 0
+    var_u = []
+    for i in range(round):
+        xi.append(list(range(count_var, count_var + 64)))
+        count_var += 64
+        w.append(list(range(count_var, count_var + 16)))
+        count_var += 16
+    for i in range(round - 1):
+        xo.append(xi[i + 1])
+    xo.append(list(range(count_var, count_var + 64)))
+    count_var += 64
+    for i in range(totalSbox - 1):
+        var_u.append(range(count_var, count_var + activeSbox))
+        count_var += activeSbox
 
-def grep(pattern, path):
-    with open(path) as f:
-        content = f.read()
-    return re.match(pattern, content)
+    # Add constraints to claim nonzero input difference
+    seq = []
+    for i in range(64):
+        seq.append(f"{xi[0][i] + 1} ")
+    seq.append(f"0\n")
+    # Add constraints for the round function
+    for r in range(round):
+        y = [xo[r][P[i]] for i in range(64)]
+        for i in range(16):
+            for j in range(len(SymbolicCNFConstraintForSbox)):
+                X = []
+                for k in range(4):
+                    X.append(xi[r][4 * i + k])
+                for k in range(4):
+                    X.append(y[4 * i + k])
+                X.append(w[r][i])
+                for k in range(len(SymbolicCNFConstraintForSbox[0])):
+                    if SymbolicCNFConstraintForSbox[j][k] == 1:
+                        seq.append(f"-{X[k] + 1} ")
+                    if SymbolicCNFConstraintForSbox[j][k] == 0:
+                        seq.append(f"{X[k] + 1} ")
+                seq.append(f"0\n")
 
-
-def gen_timer():
-    timetable = {}
-
-    def tick(name):
-        t = time.time()
-        if name in timetable:
-            timetable[name].append(t)
-        else:
-            timetable[name] = [t]
-        return t
-
-    def cost(name):
-        return timetable[name][-1] - timetable[name][-2]
-
-    return tick, cost
-
-
-tick, cost = gen_timer()
-
-# fmt: off
-P = [
-    0, 16, 32, 48,
-    1, 17, 33, 49,
-    2, 18, 34, 50,
-    3, 19, 35, 51,
-    4, 20, 36, 52,
-    5, 21, 37, 53,
-    6, 22, 38, 54,
-    7, 23, 39, 55,
-    8, 24, 40, 56,
-    9, 25, 41, 57,
-    10, 26, 42, 58,
-    11, 27, 43, 59,
-    12, 28, 44, 60,
-    13, 29, 45, 61,
-    14, 30, 46, 62,
-    15, 31, 47, 63,
- ]
-
-SymbolicCNFConstraintForSbox55 = [  # Differential Probability PRESENT (55)
-    [1, 9, 0, 0, 0, 1, 9, 0, 9, 9, 9],
-    [1, 0, 1, 9, 0, 1, 1, 9, 9, 9, 9],
-    [1, 1, 0, 9, 1, 1, 0, 9, 9, 9, 9],
-    [1, 0, 9, 0, 9, 1, 0, 0, 9, 9, 9],
-    [0, 9, 1, 1, 9, 1, 0, 1, 9, 9, 9],
-    [9, 0, 1, 1, 9, 1, 1, 0, 1, 9, 9],
-    [9, 1, 0, 1, 1, 9, 0, 0, 1, 9, 9],
-    [9, 1, 0, 9, 0, 9, 0, 0, 0, 9, 9],
-    [0, 9, 0, 9, 0, 0, 1, 0, 9, 9, 9],
-    [9, 0, 1, 0, 1, 0, 9, 1, 9, 9, 9],
-    [9, 0, 1, 0, 9, 1, 1, 1, 9, 9, 9],
-    [9, 1, 0, 9, 9, 0, 9, 1, 0, 9, 9],
-    [9, 1, 1, 0, 9, 9, 0, 9, 0, 9, 9],
-    [9, 1, 9, 9, 1, 9, 0, 1, 0, 9, 9],
-    [9, 1, 0, 1, 0, 9, 1, 0, 1, 9, 9],
-    [0, 0, 9, 1, 0, 9, 0, 9, 0, 9, 9],
-    [9, 0, 0, 9, 0, 9, 1, 0, 0, 9, 9],
-    [9, 0, 1, 1, 1, 9, 0, 0, 1, 9, 9],
-    [9, 1, 0, 0, 9, 0, 1, 1, 9, 9, 9],
-    [9, 9, 9, 9, 0, 0, 0, 0, 9, 9, 1],
-    [0, 0, 9, 9, 0, 0, 9, 0, 9, 9, 1],
-    [9, 1, 0, 0, 1, 1, 9, 1, 9, 9, 9],
-    [9, 0, 0, 9, 1, 9, 1, 9, 1, 9, 9],
-    [0, 1, 9, 1, 0, 9, 1, 1, 9, 9, 9],
-    [9, 1, 0, 9, 9, 1, 1, 9, 0, 9, 9],
-    [0, 1, 1, 9, 9, 9, 9, 0, 0, 9, 9],
-    [9, 1, 1, 9, 0, 9, 0, 9, 1, 9, 9],
-    [0, 0, 1, 9, 1, 0, 0, 9, 9, 9, 9],
-    [9, 9, 9, 0, 9, 0, 0, 9, 0, 9, 1],
-    [0, 1, 1, 9, 9, 9, 9, 1, 1, 9, 9],
-    [9, 0, 0, 0, 9, 1, 0, 9, 0, 9, 9],
-    [1, 9, 1, 1, 0, 9, 1, 9, 9, 9, 9],
-    [9, 9, 9, 1, 1, 0, 1, 9, 0, 9, 9],
-    [1, 0, 0, 1, 9, 9, 9, 1, 9, 9, 9],
-    [1, 1, 9, 1, 1, 9, 0, 9, 9, 9, 9],
-    [9, 1, 1, 9, 1, 9, 1, 9, 1, 9, 9],
-    [9, 9, 9, 1, 0, 1, 0, 1, 9, 9, 9],
-    [9, 9, 9, 1, 1, 1, 1, 9, 1, 9, 9],
-    [9, 0, 1, 9, 0, 9, 0, 0, 0, 9, 9],
-    [9, 0, 0, 9, 1, 9, 0, 0, 0, 9, 9],
-    [0, 9, 0, 9, 9, 0, 0, 0, 9, 1, 9],
-    [9, 0, 1, 1, 9, 9, 9, 1, 0, 9, 9],
-    [1, 9, 1, 0, 1, 9, 9, 9, 0, 9, 9],
-    [1, 0, 0, 0, 9, 9, 9, 0, 9, 9, 9],
-    [0, 0, 9, 9, 1, 9, 1, 9, 0, 9, 9],
-    [9, 0, 1, 9, 1, 1, 9, 9, 0, 9, 9],
-    [9, 9, 9, 0, 0, 9, 0, 9, 1, 9, 9],
-    [0, 0, 0, 9, 9, 9, 9, 9, 1, 9, 9],
-    [9, 9, 9, 1, 9, 9, 9, 9, 9, 9, 0],
-    [9, 9, 9, 0, 0, 9, 1, 9, 0, 9, 9],
-    [9, 1, 9, 0, 9, 9, 9, 0, 0, 9, 9],
-    [9, 9, 9, 9, 9, 9, 9, 1, 9, 9, 0],
-    [9, 9, 9, 9, 9, 9, 9, 9, 1, 9, 0],
-    [9, 9, 9, 9, 9, 9, 9, 9, 9, 0, 1],
-    [9, 0, 0, 9, 0, 9, 0, 9, 1, 9, 9],
-]
-
-SymbolicCNFConstraintForSbox43 = [  # Differential PRESENT (43)
-    [1, 0, 1, 9, 0, 1, 1, 9, 9],
-    [9, 0, 0, 9, 1, 0, 1, 0, 9],
-    [0, 9, 9, 1, 1, 1, 1, 0, 9],
-    [9, 1, 0, 0, 9, 0, 1, 1, 9],
-    [1, 0, 1, 9, 1, 1, 0, 0, 9],
-    [1, 1, 0, 9, 0, 1, 1, 0, 9],
-    [1, 1, 0, 9, 1, 1, 0, 9, 9],
-    [0, 0, 1, 1, 1, 9, 0, 9, 9],
-    [9, 1, 0, 1, 1, 1, 1, 9, 9],
-    [9, 0, 1, 0, 1, 9, 1, 1, 9],
-    [9, 1, 0, 0, 1, 1, 9, 1, 9],
-    [0, 0, 0, 9, 1, 9, 1, 9, 9],
-    [9, 0, 1, 0, 9, 0, 0, 1, 9],
-    [9, 1, 0, 0, 0, 0, 9, 1, 9],
-    [9, 1, 1, 0, 0, 9, 0, 9, 9],
-    [9, 0, 1, 0, 9, 1, 1, 1, 9],
-    [0, 0, 1, 9, 1, 0, 0, 9, 9],
-    [9, 1, 1, 1, 1, 0, 1, 9, 9],
-    [9, 0, 1, 1, 1, 1, 1, 9, 9],
-    [0, 9, 0, 9, 9, 0, 0, 0, 1],
-    [0, 1, 0, 9, 0, 0, 1, 9, 9],
-    [0, 1, 1, 9, 0, 9, 0, 0, 9],
-    [1, 1, 9, 0, 1, 9, 1, 1, 9],
-    [0, 1, 0, 1, 9, 1, 1, 9, 9],
-    [0, 1, 1, 9, 0, 9, 1, 1, 9],
-    [9, 1, 1, 0, 1, 9, 1, 0, 9],
-    [0, 1, 1, 9, 1, 9, 0, 1, 9],
-    [9, 0, 0, 0, 1, 9, 9, 0, 9],
-    [9, 9, 9, 9, 0, 0, 0, 0, 1],
-    [9, 9, 9, 1, 0, 1, 0, 1, 9],
-    [1, 9, 1, 1, 0, 9, 1, 9, 9],
-    [0, 0, 9, 9, 0, 0, 9, 0, 1],
-    [1, 0, 0, 1, 9, 9, 9, 1, 9],
-    [1, 1, 9, 1, 1, 9, 0, 9, 9],
-    [9, 0, 0, 9, 0, 9, 0, 1, 9],
-    [9, 9, 9, 0, 0, 1, 0, 0, 9],
-    [9, 1, 9, 9, 9, 9, 9, 9, 0],
-    [0, 0, 0, 0, 9, 9, 9, 9, 1],
-    [0, 0, 0, 1, 9, 9, 9, 0, 9],
-    [9, 0, 0, 0, 9, 9, 1, 0, 9],
-    [9, 9, 1, 9, 9, 9, 9, 9, 0],
-    [9, 9, 9, 9, 9, 9, 9, 1, 0],
-    [1, 9, 9, 9, 9, 9, 9, 9, 0],
-]
-# fmt:on
+    # Add constraints for the original sequential encoding
+    mainVars = []
+    for r in range(round):
+        for i in range(16):
+            mainVars.append(w[round - 1 - r][i])
+    mainVarNum = 16 * round
+    cardinalityCons = activeSbox
+    seq += GenSequentialEncoding(mainVars, var_u, mainVarNum, cardinalityCons)
+    # Add constraints for Matsui's strategy
+    for mc in range(matsuiCount):
+        startRound = matsuiRoundIndex[mc][0]
+        endRound = matsuiRoundIndex[mc][1]
+        leftNode = 16 * startRound
+        rightNode = 16 * endRound - 1
+        partialCardinalityCons = (
+            activeSbox - Result[startRound] - Result[round - endRound]
+        )
+        seq += GenMatsuiConstraint(
+            mainVars,
+            var_u,
+            mainVarNum,
+            cardinalityCons,
+            leftNode,
+            rightNode,
+            partialCardinalityCons,
+        )
+    with open(cnffile, "w") as f:
+        # count_clause = clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount)
+        count_clause = "".join(seq).count("\n")
+        f.write(f"p cnf {count_var} {count_clause}\n")
+        f.write("".join(seq))

@@ -7,8 +7,8 @@ SymbolicCNFConstraintForSbox = SymbolicCNFConstraintForSbox55
 
 def run(args):
     satsolver = solver_builder(args.solver)
-    tf = open(TIME_OUT, "a")
     roundOrProb = InitialLowerBound
+    tf = open(TIME, "a")
     tick("total")
     for round in range(SearchRoundStart, SearchRoundEnd):
         tick("round")

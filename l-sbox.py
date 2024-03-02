@@ -1,7 +1,8 @@
 import time
 from subprocess import Popen
 
-from common import *
+# from common import *
+from const import *
 
 FullRound = 32
 
@@ -15,111 +16,6 @@ GroupConstraintChoice = 1
 GroupNumForChoice1 = 1
 
 LinearActiveSbox = FullRound * [0]
-
-
-def CountClausesInRoundFunction(Round, ActiveSbox, clause_num):
-    count = clause_num
-    # Nonzero input
-    count += 1
-    # Cluases for Sbox
-    for r in range(Round):
-        for i in range(16):
-            for j in range(39):
-                count += 1
-    return count
-
-
-def CountClausesInSequentialEncoding(main_var_num, cardinalitycons, clause_num):
-    count = clause_num
-    n = main_var_num
-    k = cardinalitycons
-    if k > 0:
-        count += 1
-        for j in range(1, k):
-            count += 1
-        for i in range(1, n - 1):
-            count += 3
-        for j in range(1, k):
-            for i in range(1, n - 1):
-                count += 2
-        count += 1
-    if k == 0:
-        for i in range(n):
-            count += 1
-    return count
-
-
-def CountClausesForMatsuiStrategy(n, k, left, right, m, clausenum):
-    count = clausenum
-    if m > 0:
-        if (left == 0) and (right < n - 1):
-            for i in range(1, right + 1):
-                count += 1
-        if (left > 0) and (right == n - 1):
-            for i in range(0, k - m):
-                count += 1
-            for i in range(0, k - m + 1):
-                count += 1
-        if (left > 0) and (right < n - 1):
-            for i in range(0, k - m):
-                count += 1
-    if m == 0:
-        for i in range(left, right + 1):
-            count += 1
-    return count
-
-
-def GenSequentialEncoding(x, u, main_var_num, cardinalitycons, fout):
-    n = main_var_num
-    k = cardinalitycons
-    if k > 0:
-        clauseseq = f"-{x[0] + 1} {u[0][0] + 1} 0\n"
-        fout.write(clauseseq)
-        for j in range(1, k):
-            clauseseq = f"-{u[0][j] + 1} 0\n"
-            fout.write(clauseseq)
-        for i in range(1, n - 1):
-            clauseseq = f"-{x[i] + 1} {u[i][0] + 1} 0\n"
-            fout.write(clauseseq)
-            clauseseq = f"-{u[i - 1][0] + 1} {u[i][0] + 1} 0\n"
-            fout.write(clauseseq)
-            clauseseq = f"-{x[i] + 1} -{u[i - 1][k - 1] + 1} 0\n"
-            fout.write(clauseseq)
-        for j in range(1, k):
-            for i in range(1, n - 1):
-                clauseseq = f"-{x[i] + 1} -{u[i - 1][j - 1] + 1} {u[i][j] + 1} 0\n"
-                fout.write(clauseseq)
-                clauseseq = f"-{u[i - 1][j] + 1} {u[i][j] + 1} 0\n"
-                fout.write(clauseseq)
-        clauseseq = f"-{x[n - 1] + 1} -{u[n - 2][k - 1] + 1} 0\n"
-        fout.write(clauseseq)
-    if k == 0:
-        for i in range(n):
-            clauseseq = f"-{x[i] + 1} 0\n"
-            fout.write(clauseseq)
-
-
-def GenMatsuiConstraint(x, u, n, k, left, right, m, fout):
-    if m > 0:
-        if (left == 0) and (right < n - 1):
-            for i in range(1, right + 1):
-                clauseseq = f"-{x[i] + 1} -{u[i - 1][m - 1] + 1} 0\n"
-                fout.write(clauseseq)
-        if (left > 0) and (right == n - 1):
-            for i in range(0, k - m):
-                clauseseq = f"{u[left - 1][i] + 1} -{u[right - 1][i + m] + 1} 0\n"
-                fout.write(clauseseq)
-            for i in range(0, k - m + 1):
-                clauseseq = f"{u[left - 1][i] + 1} -{x[right] + 1} -{u[right - 1][i + m - 1] + 1} 0\n"
-                fout.write(clauseseq)
-        if (left > 0) and (right < n - 1):
-            for i in range(0, k - m):
-                clauseseq = f"{u[left - 1][i] + 1} -{u[right][i + m] + 1} 0\n"
-                fout.write(clauseseq)
-    if m == 0:
-        for i in range(left, right + 1):
-            clauseseq = f"-{x[i] + 1} 0\n"
-            fout.write(clauseseq)
 
 
 def Decision(Round, ActiveSbox, MatsuiRoundIndex, MatsuiCount, flag):
@@ -200,113 +96,6 @@ def Decision(Round, ActiveSbox, MatsuiRoundIndex, MatsuiCount, flag):
     # Add constraints for the round function
     for r in range(Round):
         y = list([])
-        P = [
-            0,
-            16,
-            32,
-            48,
-            1,
-            17,
-            33,
-            49,
-            2,
-            18,
-            34,
-            50,
-            3,
-            19,
-            35,
-            51,
-            4,
-            20,
-            36,
-            52,
-            5,
-            21,
-            37,
-            53,
-            6,
-            22,
-            38,
-            54,
-            7,
-            23,
-            39,
-            55,
-            8,
-            24,
-            40,
-            56,
-            9,
-            25,
-            41,
-            57,
-            10,
-            26,
-            42,
-            58,
-            11,
-            27,
-            43,
-            59,
-            12,
-            28,
-            44,
-            60,
-            13,
-            29,
-            45,
-            61,
-            14,
-            30,
-            46,
-            62,
-            15,
-            31,
-            47,
-            63,
-        ]
-        SymbolicCNFConstraintForSbox = [  # Linear PRESENT (39)
-            [1, 0, 1, 0, 9, 0, 0, 9, 9],
-            [1, 1, 0, 0, 0, 0, 9, 9, 9],
-            [1, 1, 1, 1, 0, 1, 0, 9, 9],
-            [9, 0, 0, 9, 1, 0, 1, 1, 9],
-            [0, 0, 0, 9, 9, 9, 9, 0, 1],
-            [1, 0, 0, 1, 1, 1, 1, 9, 9],
-            [0, 1, 1, 9, 9, 1, 9, 1, 9],
-            [1, 0, 1, 1, 9, 0, 1, 9, 9],
-            [1, 1, 0, 1, 1, 0, 9, 9, 9],
-            [1, 0, 1, 9, 0, 0, 1, 1, 9],
-            [1, 0, 1, 9, 1, 0, 0, 1, 9],
-            [1, 1, 0, 9, 0, 0, 1, 1, 9],
-            [1, 1, 0, 9, 1, 0, 0, 1, 9],
-            [0, 0, 0, 9, 1, 9, 9, 0, 9],
-            [9, 9, 9, 0, 0, 0, 0, 9, 1],
-            [0, 0, 0, 9, 9, 0, 9, 1, 9],
-            [0, 0, 0, 0, 9, 9, 9, 1, 9],
-            [0, 0, 0, 9, 9, 9, 1, 0, 9],
-            [0, 9, 9, 1, 0, 0, 0, 9, 9],
-            [9, 9, 9, 9, 0, 0, 0, 0, 1],
-            [1, 9, 9, 9, 9, 9, 9, 9, 0],
-            [9, 1, 9, 9, 9, 9, 9, 9, 0],
-            [9, 9, 1, 9, 9, 9, 9, 9, 0],
-            [9, 9, 9, 9, 9, 1, 9, 9, 0],
-            [1, 1, 1, 9, 1, 1, 1, 9, 9],
-            [1, 0, 0, 9, 0, 1, 0, 9, 9],
-            [9, 9, 9, 1, 1, 0, 1, 1, 9],
-            [0, 9, 1, 1, 1, 1, 0, 9, 9],
-            [9, 9, 9, 0, 1, 0, 1, 0, 9],
-            [0, 1, 9, 1, 0, 1, 1, 9, 9],
-            [9, 1, 1, 0, 1, 9, 1, 9, 9],
-            [0, 1, 9, 9, 1, 1, 0, 1, 9],
-            [0, 9, 1, 9, 0, 1, 1, 1, 9],
-            [0, 1, 1, 0, 0, 9, 0, 9, 9],
-            [0, 9, 0, 0, 1, 1, 0, 9, 9],
-            [0, 0, 9, 9, 1, 1, 0, 0, 9],
-            [0, 9, 0, 9, 0, 1, 1, 0, 9],
-            [0, 0, 9, 0, 0, 1, 1, 9, 9],
-            [0, 1, 1, 9, 9, 0, 9, 0, 9],
-        ]
         for i in range(64):
             y += [xout[r][P[i]]]
         for i in range(16):
@@ -355,42 +144,6 @@ def Decision(Round, ActiveSbox, MatsuiRoundIndex, MatsuiCount, flag):
             file,
         )
     file.close()
-    # Call solver cadical
-    order = f"~/Install/cadical/build/cadical Problem-Round{Round}-Active{ActiveSbox}.cnf > Round{Round}-Active{ActiveSbox}-solution.out"
-    Popen(order, shell=True).wait()
-    # Extracting results
-    order = f"sed -n '/s SATISFIABLE/p' Round{Round}-Active{ActiveSbox}-solution.out > SatSolution.out"
-    Popen(order, shell=True).wait()
-    order = f"sed -n '/s UNSATISFIABLE/p' Round{Round}-Active{ActiveSbox}-solution.out > UnsatSolution.out"
-    Popen(order, shell=True).wait()
-    satsol = open("SatSolution.out")
-    unsatsol = open("UnsatSolution.out")
-    satresult = satsol.readlines()
-    unsatresult = unsatsol.readlines()
-    satsol.close()
-    unsatsol.close()
-    if (len(satresult) == 0) and (len(unsatresult) > 0):
-        flag = False
-    if (len(satresult) > 0) and (len(unsatresult) == 0):
-        flag = True
-    order = "rm SatSolution.out"
-    Popen(order, shell=True).wait()
-    order = "rm UnsatSolution.out"
-    Popen(order, shell=True).wait()
-    # Removing cnf file
-    order = f"rm Problem-Round{Round}-Active{ActiveSbox}.cnf"
-    Popen(order, shell=True).wait()
-    time_end = time.time()
-    # Printing solutions
-    if flag == True:
-        print(
-            f"Round:{Round}; Active: {ActiveSbox}; Sat; TotalCost: {time_end - time_start}"
-        )
-    else:
-        print(
-            f"Round:{Round}; Active: {ActiveSbox}; Unsat; TotalCost: {time_end - time_start}"
-        )
-    return flag
 
 
 # main function
