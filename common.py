@@ -381,7 +381,7 @@ def gen_timer():
         return t
 
     def cost(name):
-        return timetable[name][1] - timetable[name][0]
+        return timetable[name][-1] - timetable[name][-2]
 
     return tick, cost
 
