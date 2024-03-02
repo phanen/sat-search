@@ -9,7 +9,7 @@ fmt:
 benchmark: cadical cryptominisat kissat
 
 cadical cryptominisat kissat:
-	python main.py -s $@
-	python main.py -s $@ -p
-	python main.py -s $@ -l
-	python main.py -s $@ -l -p
+	python src/main.py -s $@
+	python src/main.py -s $@ -p
+	python src/main.py -s $@ -l
+	python src/main.py -s $@ -l -p

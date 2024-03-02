@@ -25,7 +25,6 @@ def run(args):
     satsolver = solver_builder(args.solver)
     cnfbuilder = cnfbuilders[(args.linear << 1) + args.prob]
     box = boxes[(args.linear << 1) + args.prob]
-
     suffix = f"{'L' if args.linear else 'D'}-{'P' if args.prob else 'S'}-{args.solver}"
     TIME = f"RunTimeSummarise-{suffix}.out"
 
