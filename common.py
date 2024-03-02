@@ -29,6 +29,7 @@ SOLVER = {
 
 SBVA = os.path.expanduser("~/b/SBVA/sbva")
 
+
 def solver_builder(solver_name):
     solver_cmd = SOLVER.get(solver_name)
     if solver_cmd == None:
@@ -353,32 +354,39 @@ def cnfbuilder_diff_prob(
         f.write(f"p cnf {count_var} {count_clause}\n")
         f.write("".join(seq))
 
-def cnfbuilder_diff_sbox(
+
+cnfbuilder_linear_sbox = cnfbuilder_diff_sbox
+
+
+def cnfbuilder_linear_bias(
     round,
-    activeSbox,
+    probability,
     matsuiRoundIndex,
     matsuiCount,
     SymbolicCNFConstraintForSbox,
     cnffile,
 ):
-    xi = []
-    w = []
+    xi = []  # 64
+    p = []  # 16
+    q = []
     xo = []
-    totalSbox = 16 * round
+    totalProb = 16 * round * 3
     count_var = 0
     var_u = []
     for i in range(round):
         xi.append(list(range(count_var, count_var + 64)))
         count_var += 64
-        w.append(list(range(count_var, count_var + 16)))
+        p.append(list(range(count_var, count_var + 16)))
+        count_var += 16
+        q.append(list(range(count_var, count_var + 16)))
         count_var += 16
     for i in range(round - 1):
         xo.append(xi[i + 1])
     xo.append(list(range(count_var, count_var + 64)))
     count_var += 64
-    for i in range(totalSbox - 1):
-        var_u.append(range(count_var, count_var + activeSbox))
-        count_var += activeSbox
+    for i in range(totalProb - 1):
+        var_u.append(range(count_var, count_var + probability))
+        count_var += probability
 
     # Add constraints to claim nonzero input difference
     seq = []
@@ -395,7 +403,8 @@ def cnfbuilder_diff_sbox(
                     X.append(xi[r][4 * i + k])
                 for k in range(4):
                     X.append(y[4 * i + k])
-                X.append(w[r][i])
+                X.append(p[r][i])
+                X.append(q[r][i])
                 for k in range(len(SymbolicCNFConstraintForSbox[0])):
                     if SymbolicCNFConstraintForSbox[j][k] == 1:
                         seq.append(f"-{X[k] + 1} ")
@@ -407,18 +416,19 @@ def cnfbuilder_diff_sbox(
     mainVars = []
     for r in range(round):
         for i in range(16):
-            mainVars.append(w[round - 1 - r][i])
-    mainVarNum = 16 * round
-    cardinalityCons = activeSbox
+            mainVars.append(p[round - 1 - r][i])
+            mainVars.append(q[round - 1 - r][i])
+    mainVarNum = 16 * round * 2
+    cardinalityCons = probability
     seq += GenSequentialEncoding(mainVars, var_u, mainVarNum, cardinalityCons)
     # Add constraints for Matsui's strategy
     for mc in range(matsuiCount):
-        startRound = matsuiRoundIndex[mc][0]
-        endRound = matsuiRoundIndex[mc][1]
-        leftNode = 16 * startRound
-        rightNode = 16 * endRound - 1
+        startround = matsuiRoundIndex[mc][0]
+        endround = matsuiRoundIndex[mc][1]
+        leftNode = 16 * startround * 2
+        rightNode = 16 * endround * 2 - 1
         partialCardinalityCons = (
-            activeSbox - Result[startRound] - Result[round - endRound]
+            probability - Result[startround] - Result[round - endround]
         )
         seq += GenMatsuiConstraint(
             mainVars,

@@ -9,6 +9,8 @@ InitialLowerBound = 0
 cnfbuilders = [
     cnfbuilder_diff_sbox,
     cnfbuilder_diff_prob,
+    cnfbuilder_linear_sbox,
+    cnfbuilder_linear_bias,
 ]
 
 boxes = [
@@ -25,7 +27,7 @@ def run(args):
     box = boxes[(args.linear << 1) + args.prob]
 
     tf = open(TIME, "a")
-    roundOrProb = InitialLowerBound
+    i = InitialLowerBound
     tick("total")
     for round in range(SearchRoundStart, SearchRoundEnd):
         tick("round")
@@ -33,29 +35,25 @@ def run(args):
         while True:
             cnfbuilder(
                 round,
-                roundOrProb,
+                i,
                 matsuiRoundIndex,
                 matsuiCount,
                 box,
-                f"R{round}-A{roundOrProb}.cnf",
+                f"R{round}-A{i}.cnf",
             )
             if args.sbva:
-                reduce_by_sbva(f"R{round}-A{roundOrProb}.cnf")
+                reduce_by_sbva(f"R{round}-A{i}.cnf")
 
             tick("sat")
-            flag = satsolver(
-                f"R{round}-A{roundOrProb}.cnf", f"R{round}-A{roundOrProb}.out"
-            )
+            flag = satsolver(f"R{round}-A{i}.cnf", f"R{round}-A{i}.out")
             tick("sat")
-            log(
-                f"\tRound: {round}; Active: {roundOrProb:2}; {flag:1}; Cost: {cost('sat')}"
-            )
-            roundOrProb += 1
+            log(f"\tRound: {round}; Active: {i:2}; {flag:1}; Cost: {cost('sat')}")
+            i += 1
             if flag:
                 break
-        Result[round] = roundOrProb - 1
+        Result[round] = i - 1
         tick("round")
-        tf.write(f"Round: {round}; Active: {roundOrProb - 1}; Cost: {cost('round')}\n")
+        tf.write(f"Round: {round}; Active: {i - 1}; Cost: {cost('round')}\n")
     tick("total")
     tf.write(f"Total Runtime: {cost('total')}\n\n")
     tf.close()
