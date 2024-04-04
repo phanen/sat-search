@@ -61,7 +61,6 @@ def reduce_by_sbva(filename):
 
 
 def clause_counter(round, activeSbox, matsuiRoundIndex, matsuiCount, box):
-
     def CountClausesInRoundFunction(round):
         return 1 + round * 16 * len(box)
 

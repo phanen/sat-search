@@ -21,14 +21,15 @@ boxes = [
 ]
 
 
+tick, cost = gen_timer()
+
+
 def run(args):
     satsolver = solver_builder(args.solver)
-    cnfbuilder = cnfbuilders[(args.linear << 1) + args.prob]
+    gen_cnf = cnfbuilders[(args.linear << 1) + args.prob]
     box = boxes[(args.linear << 1) + args.prob]
     suffix = f"{'L' if args.linear else 'D'}-{'P' if args.prob else 'S'}-{args.solver}"
-    TIME = f"RunTimeSummarise-{suffix}.out"
-
-    tf = open(TIME, "a")
+    tf = open(f"RunTimeSummarise-{suffix}.out", "a")
     i = InitialLowerBound
     tick("total")
     for round in range(SearchRoundStart, SearchRoundEnd):
@@ -37,10 +38,9 @@ def run(args):
         cnffile = f"R{round}-A{i}-{suffix}.cnf"
         outfile = f"R{round}-A{i}-{suffix}.out"
         while True:
-            cnfbuilder(round, i, matsuiRoundIndex, matsuiCount, box, cnffile)
+            gen_cnf(round, i, matsuiRoundIndex, matsuiCount, box, cnffile)
             if args.sbva:
                 reduce_by_sbva(cnffile)
-
             tick("sat")
             flag = satsolver(cnffile, outfile)
             tick("sat")
@@ -54,7 +54,7 @@ def run(args):
     tick("total")
     tf.write(f"Total Runtime: {cost('total')}\n\n")
     tf.close()
-    log(Result)
+    log(f"Result: {Result}")
     log(f"Total Runtime: {cost('total')}")
 
 

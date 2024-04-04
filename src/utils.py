@@ -22,6 +22,3 @@ def gen_timer():
         return timetable[name][-1] - timetable[name][-2]
 
     return tick, cost
-
-
-tick, cost = gen_timer()
