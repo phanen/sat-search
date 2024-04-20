@@ -3,7 +3,7 @@ import os
 
 DEP_PATH = "./deps/"
 
-manifestes = {
+sources = {
     "cadical": {
         "repo": "https://github.com/arminbiere/cadical",
         "build": "./configure && make",
@@ -16,6 +16,22 @@ manifestes = {
         "repo": "https://github.com/arminbiere/kissat",
         "build": "cmake -B build && cmake --build build",
     },
+    "glucose-syrup": {
+        "repo": "https://github.com/audemard/glucose",
+        "build": "cmake -Bbuild && cmake --build build",
+    },
+    "lingeling": {
+        "repo": "https://github.com/arminbiere/lingeling",
+        "build": "./configure.sh && make",
+    },
+    "maplesat": {
+        "repo": "https://github.com/curtisbright/maplesat",
+        "build": "make",
+    },
+    # "piconsat": {
+    #     "repo": "https://github.com/conda/pycosat",
+    #     "build": "make PYTHON=python",
+    # },
 }
 
 
@@ -42,4 +58,4 @@ async def build_deps(manifestes):
     await asyncio.gather(*tasks)
 
 
-asyncio.run(build_deps(manifestes))
+asyncio.run(build_deps(sources))

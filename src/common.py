@@ -22,12 +22,17 @@ MATSUI = "MatsuiCondition.out"
 PROJ_ROOT = run(
     ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
 ).stdout.strip()
+
 SOLVER = {
     "cadical": [PROJ_ROOT + "/deps/cadical/build/cadical", "-q"],
-    "cryptominisat": [PROJ_ROOT + "./deps/cryptominisat/build/cryptominisat5"],
+    "cryptominisat": [PROJ_ROOT + "/deps/cryptominisat/build/cryptominisat5"],
     "kissat": [PROJ_ROOT + "/deps/kissat/build/kissat", "-q"],
+    "glucose-syrup": [PROJ_ROOT + "/deps/glucose/build/glucose-syrup", "-verb=0"],
+    # "glucose-simp": [PROJ_ROOT + "/deps/glucose/build/glucose-simp", "-verb=0"],
+    "lingeling": [PROJ_ROOT + "/deps/lingeling/lingeling", "-q"],
+    # "treengeling": [PROJ_ROOT + "/deps/lingeling/treengeling", "-q"],
+    "maplesat": [PROJ_ROOT + "/deps/maplesat/simp/maplesat_static", "-verb=0"],
 }
-
 SBVA = os.path.expanduser("~/b/SBVA/sbva")
 
 
