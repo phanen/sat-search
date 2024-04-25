@@ -27,13 +27,11 @@ SOLVER = {
     "cadical": [PROJ_ROOT + "/deps/cadical/build/cadical", "-q"],
     "cryptominisat": [PROJ_ROOT + "/deps/cryptominisat/build/cryptominisat5"],
     "kissat": [PROJ_ROOT + "/deps/kissat/build/kissat", "-q"],
-    "glucose-syrup": [PROJ_ROOT + "/deps/glucose/build/glucose-syrup", "-verb=0"],
-    "glucose-simp": [PROJ_ROOT + "/deps/glucose/build/glucose-simp", "-verb=0"],
-    "lingeling": [PROJ_ROOT + "/deps/lingeling/lingeling", "-q"],
-    "treengeling": [
-        PROJ_ROOT + "/deps/lingeling/treengeling",
-    ],
+    "glucose-syrup": [PROJ_ROOT + "/deps/glucose-syrup/build/glucose-syrup", "-verb=0"],
     "maplesat": [PROJ_ROOT + "/deps/maplesat/simp/maplesat_static", "-verb=0"],
+    "glucose-simp": [PROJ_ROOT + "/deps/glucose-syrup/build/glucose-simp", "-verb=0"],
+    "lingeling": [PROJ_ROOT + "/deps/lingeling/lingeling", "-q"],
+    "treengeling": [PROJ_ROOT + "/deps/lingeling/treengeling"],
 }
 SBVA = os.path.expanduser("~/b/SBVA/sbva")
 
@@ -43,6 +41,7 @@ def solver_builder(solver_name):
     if solver_cmd == None:
         exit("no such solver")
     if not os.access(solver_cmd[0], os.X_OK):
+        print(solver_cmd)
         exit("not executable solver")
 
     def satsolver(ifilename, ofilename):
