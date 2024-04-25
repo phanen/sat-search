@@ -30,46 +30,50 @@ pub struct Opt {
     #[structopt(short = "C", long)]
     pub caption: Option<String>,
 
-    #[structopt(long)]
-    pub caption_is_under: bool,
-
     #[structopt(short, long)]
     pub label: Option<String>,
 
-    #[structopt(short, long)]
+    #[structopt(short = "c", long)]
     pub column: Option<usize>,
 
-    #[structopt(short, long, default_value = "0")]
-    pub hline: Vec<usize>,
+    //#[structopt(short, long, default_value = "0")]
+    #[structopt(short, long)]
+    pub hline: Option<Vec<usize>>,
+
+    #[structopt(short = "s", long, default_value = "1.52")]
+    pub scale: f64,
 }
 
 fn write_table(reader: &mut Reader<Stdin>, opt: &Opt) {
-    let hline_set = opt.hline.iter().cloned().collect::<BTreeSet<usize>>();
+    let hline_set = match &opt.hline {
+        Some(hline) => hline.iter().cloned().collect::<BTreeSet<usize>>(),
+        None => BTreeSet::new(),
+    };
+
+    //let hline_set = opt.hline.iter().cloned().collect::<BTreeSet<usize>>();
 
     println!("\\begin{{table}}[{}]", &opt.table);
-    if !opt.caption_is_under {
-        if let Some(caption) = &opt.caption {
-            println!("\t\\caption{{{}}}", caption);
-        }
+    if let Some(caption) = &opt.caption {
+        println!("\\caption{{{}}}", caption);
     }
     if let Some(label) = &opt.label {
-        println!("\t\\label{{{}}}", label);
+        println!("\\label{{{}}}", label);
     }
 
     let cols = opt.column.unwrap_or(reader.headers().unwrap().len());
 
-    println!("\\renewcommand\\arraystretch{{1.52}}");
+    println!("\\renewcommand\\arraystretch{{{}}}", opt.scale);
     println!("\\centering");
-
     println!("\\begin{{tabular}}{{@{{}}{}@{{}}}}", "c".repeat(cols));
     println!("\\toprule");
 
     // consume headers
     if let Ok(result) = reader.headers() {
-        for i in 0..cols - 1 {
-            print!("\\textbf{{{}}} & ", &result[i]);
+        let back = result.len() - 1;
+        for record in result.iter().take(back) {
+            print!("\\textbf{{{}}} & ", &record);
         }
-        print!("\\textbf{{{}}} \\\\", &result[cols - 1]);
+        print!("\\textbf{{{}}} \\\\", &result.iter().last().unwrap());
         print!(" \\midrule");
         println!();
     }
@@ -87,17 +91,12 @@ fn write_table(reader: &mut Reader<Stdin>, opt: &Opt) {
         }
         print!("${}$ \\\\", &record[back]);
         if hline_set.contains(&(i + 1)) {
-            print!(" \\bottomrule");
+            print!("\\bottomrule");
         }
         println!();
     }
 
-    println!("\t\\bottomrule");
-    println!("\t\\end{{tabular}}");
-    if opt.caption_is_under {
-        if let Some(caption) = &opt.caption {
-            println!("\t\\caption{{{}}}", caption);
-        }
-    }
+    println!("\\bottomrule");
+    println!("\\end{{tabular}}");
     println!("\\end{{table}}");
 }
