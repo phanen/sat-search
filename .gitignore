@@ -4,3 +4,4 @@ __pycache__
 *.cnf
 *.pdf
 deps
+*.csv

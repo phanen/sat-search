@@ -1,11 +1,9 @@
+import argparse
 import copy
 import csv
 import itertools as it
 import re
 import sys
-
-# import sys
-# solver = sys.argv[1]
 
 
 # keep 3 decimal places
@@ -42,14 +40,23 @@ def parse(solver, data):
 
 
 if __name__ == "__main__":
+    # s = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", default=False, action="store_true")
+    args = parser.parse_args()
+
     # to be written to csv
     solvers = {
         "cadical": {},
-        # "cryptominisat": {},
-        # "kissat": {},
-        # "glucose-syrup": {},
-        # "maplesat": {},
+        "cryptominisat": {},
+        "kissat": {},
+        "glucose-syrup": {},
+        "maplesat": {},
     }
+
+    # if s not in solvers.keys():
+    #     print(f"no such sovler: {s}")
+    #     sys.exit(1)
 
     for solver, data in solvers.items():
         parse(solver, data)
@@ -78,9 +85,10 @@ if __name__ == "__main__":
                     w.writerow(row)
 
             do_write(f)
-            do_write(sys.stdout)
+            if args.o:
+                do_write(sys.stdout)
             # w = csv.DictWriter(f, fieldnames=fieldnames)
-
             # print(f"Error occurred: {str(e)}")
+
     # or, to json, then to table https://www.convertcsv.com/json-to-csv.htm
     # print(json.dumps(solvers["cadical"], indent=4))
