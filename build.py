@@ -14,7 +14,7 @@ sources = {
     },
     "kissat": {
         "repo": "https://github.com/arminbiere/kissat",
-        "build": "cmake -B build && cmake --build build",
+        "build": "./configure && make",
     },
     "glucose-syrup": {
         "repo": "https://github.com/audemard/glucose",

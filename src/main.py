@@ -32,6 +32,10 @@ def run(args):
     tf = open(f"RunTimeSummarise-{suffix}.out", "a")
     i = InitialLowerBound
     tick("total")
+
+    SearchRoundStart = args.s
+    SearchRoundEnd = args.e
+    print(SearchRoundStart, SearchRoundEnd)
     for round in range(SearchRoundStart, SearchRoundEnd):
         tick("round")
         matsuiRoundIndex, matsuiCount = matsui(round)
@@ -60,9 +64,15 @@ def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--solver", type=str, required=True)
+    parser.add_argument("--solver", type=str, required=True)
     parser.add_argument("--sbva", action="store_true")
     parser.add_argument("-p", "--prob", default=False, action="store_true")
     parser.add_argument("-l", "--linear", default=False, action="store_true")
+
+    parser.add_argument("-s", type=int, default=1)
+    parser.add_argument("-e", type=int, default=10)
+    # give two number tpyed flags
+
     args = parser.parse_args()
+
     run(args)
