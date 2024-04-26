@@ -40,7 +40,7 @@ pub struct Opt {
     #[structopt(short, long)]
     pub hline: Option<Vec<usize>>,
 
-    #[structopt(short = "s", long, default_value = "1.52")]
+    #[structopt(short = "s", long, default_value = "1.4")]
     pub scale: f64,
 }
 
@@ -71,9 +71,9 @@ fn write_table(reader: &mut Reader<Stdin>, opt: &Opt) {
     if let Ok(result) = reader.headers() {
         let back = result.len() - 1;
         for record in result.iter().take(back) {
-            print!("\\textbf{{{}}} & ", &record);
+            print!("\\textbf{{${}$}} & ", &record);
         }
-        print!("\\textbf{{{}}} \\\\", &result.iter().last().unwrap());
+        print!("\\textbf{{${}$}} \\\\", &result.iter().last().unwrap());
         print!(" \\midrule");
         println!();
     }
@@ -84,7 +84,7 @@ fn write_table(reader: &mut Reader<Stdin>, opt: &Opt) {
         let back = record.len() - 1;
         for i in 0..back {
             if i == 0 {
-                print!("\\textbf{{{}}} & ", &record[i]);
+                print!("\\textbf{{${}$}} & ", &record[i]);
             } else {
                 print!("${}$ & ", &record[i]);
             }

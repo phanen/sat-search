@@ -26,8 +26,16 @@ csv:
 
 tbl: cadical-tbl cryptominisat-tbl kissat-tbl glucose-syrup-tbl maplesat-tbl
 
+A := 65
 cadical-tbl cryptominisat-tbl kissat-tbl glucose-syrup-tbl maplesat-tbl: csv
-	@cat result-$(subst -tbl,,$@).csv | rust-script scripts/gen_latex.rs
+	@printf "\subsection*{\x$(shell printf %x $A). $(subst -tbl,,$@) 模型测试数据}"
+	@echo
+	@cat A-$(subst -tbl,,$@).csv | rust-script scripts/gen_latex.rs -C "$(subst -tbl,,$@) 模型测试数据结果（平台 A）"
+	@echo
+	@cat B-$(subst -tbl,,$@).csv | rust-script scripts/gen_latex.rs -C "$(subst -tbl,,$@) 模型测试数据结果（平台 B）"
+	$(eval A := $(shell echo $$(($(A) + 1))))
+
+# @cat $(hostnamectl hostname)-$(subst -tbl,,$@).csv | rust-script scripts/gen_latex.rs
 
 clean:
 	rm *.out *.cnf
@@ -36,4 +44,5 @@ fmt:
 	flynt -ll 200 -tc *.py
 	isort ./*.py
 	black ./*.py
+
 
