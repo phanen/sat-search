@@ -17,7 +17,7 @@ plt.rcParams["font.sans-serif"] = ["Times New Roman"]
 plt.rcParams["text.usetex"] = True
 
 
-plt.figure(figsize=(20, 14))
+plt.figure(figsize=(22, 13))
 
 
 def merge_csv(filename):
@@ -43,12 +43,6 @@ def merge_csv(filename):
     return df
 
 
-def chore_labels(plt):
-    plt.legend(loc="best", fontsize=18)
-    plt.xlabel("Round", fontsize=18)
-    plt.ylabel("Time", fontsize=18)
-
-
 def plot_cmp_solvers(df, model):
     # plt.figure(figsize=(10, 6))
     plt.subplot(1, 2, 1)
@@ -65,50 +59,49 @@ def plot_cmp_solvers(df, model):
                 label=f"${entry}$",
                 color=["red", "blue", "orange", "green", "black"][sol_nr],
             )
-            chore_labels(plt)
+            plt.legend(loc="best", fontsize=18)
+            plt.xlabel("Round", fontsize=18)
+            plt.ylabel("Time", fontsize=18)
     plt.show()
     plt.savefig(f"plot_cmp_solvers-{model}.png")
+    plt.clf()
+    plt.cla()
 
 
+# https://www.zhihu.com/question/26627112
 def plot_cmp_hosts(df, sname):
-    # plt.subplot(1, 3, 1)
+    plt.subplot(1, 3, 1)
     for f_nr, model in enumerate(["s", "l", "p"]):
         plt.subplot(1, 3, f_nr + 1)
         for h_nr, host in enumerate(["A", "B"]):
             entry = f"T_{{{sname}}}^{{{host},{model}}}"
-            # plt.plot(list(range(1, 29)), df[entry], marker="o", label=f"${entry}$")
-            bar = plt.bar(
+            plt.bar(
                 list(range(1, 29)),
                 df[entry],
                 label=f"${entry}$",
                 color=["red", "blue"][h_nr],
             )
-            # plt.plot(A_ratio, marker="o", label=f"${entry}$")
             # plt.bar_label(bar, labels=A_ratio, label_type="edge")
-            chore_labels(plt)
-            if h_nr == 1:
-                A_values = df[f"T_{{{sname}}}^{{A,{model}}}"]
-                B_values = df[f"T_{{{sname}}}^{{B,{model}}}"]
-                A_ratio = B_values / A_values
-                # print(A_ratio)
-                plt.twinx()
-                plt.plot(
-                    A_ratio,
-                    marker="*",
-                    color="black",
-                    label="Ratio",
-                )
-                # for a, b in zip(list(range(1, 29)), A_ratio):
-                #     pc = int(b * 100)
-                #     print(a, b)
-                #     plt.text(a, b, b, ha="center", va="bottom", fontsize=12)
-
-                # plt.ylabel("Ratio", fontsize=18)
-                plt.legend(loc="best", fontsize=18)
-
-            # plt.title(f"{solver} 求解器", size=18)
+            plt.legend(loc="best", fontsize=18)
+            plt.xlabel("Round", fontsize=18)
+            plt.ylabel("Time", fontsize=18)
+        A_values = df[f"T_{{{sname}}}^{{A,{model}}}"]
+        B_values = df[f"T_{{{sname}}}^{{B,{model}}}"]
+        A_ratio = B_values / A_values
+        plt.twinx()
+        plt.plot(A_ratio, marker="*", color="black", label="Ratio")
+        plt.legend(loc="best", fontsize=18)
+        # for a, b in zip(list(range(1, 29)), A_ratio):
+        #     pc = int(b * 100)
+        #     print(a, b)
+        #     plt.text(a, b, b, ha="center", va="bottom", fontsize=12)
+        # plt.ylabel("Ratio", fontsize=18)
+        # plt.legend(loc="best", fontsize=18)
+        # plt.title(f"{solver} 求解器", size=18)
     plt.show()
     plt.savefig(f"plot_cmp_host-{sname}.png")
+    plt.cla()
+    plt.clf()
 
 
 if __name__ == "__main__":
