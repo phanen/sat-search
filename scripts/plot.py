@@ -16,10 +16,12 @@ solvers = [
 plt.rcParams["font.sans-serif"] = ["Times New Roman"]
 plt.rcParams["text.usetex"] = True
 
+legend_fontsize = 50
+ticks_fontsize = 40
+label_fontsize = 40
 
-plt.figure(figsize=(22, 13))
 
-
+# TODO: larger font, harden line
 def merge_csv(filename):
     # check if file exist
     if os.path.isfile(filename):
@@ -44,9 +46,9 @@ def merge_csv(filename):
 
 
 def plot_cmp_solvers(df, model):
-    # plt.figure(figsize=(10, 6))
+    plt.cla()
+    plt.clf()
     plt.subplot(1, 2, 1)
-    # plt.plot([0, 1], [0, 1])
     for f_nr, host in enumerate(["A", "B"]):
         plt.subplot(1, 2, f_nr + 1)
         for sol_nr, solver in enumerate(solvers):
@@ -56,20 +58,25 @@ def plot_cmp_solvers(df, model):
                 list(range(1, 29)),
                 df[entry],
                 marker="o",
+                linewidth=15,
                 label=f"${entry}$",
+                linestyle=["-", ":", "--", "solid", "-."][sol_nr],
                 color=["red", "blue", "orange", "green", "black"][sol_nr],
             )
-            plt.legend(loc="best", fontsize=18)
-            plt.xlabel("Round", fontsize=18)
-            plt.ylabel("Time", fontsize=18)
+            plt.xticks(fontsize=ticks_fontsize)
+            plt.yticks(fontsize=ticks_fontsize)
+            plt.legend(loc="best", fontsize=legend_fontsize)
+            plt.xlabel("Round", fontsize=label_fontsize)
+            plt.ylabel("Time", fontsize=label_fontsize)
     plt.show()
     plt.savefig(f"plot_cmp_solvers-{model}.png")
-    plt.clf()
-    plt.cla()
 
 
 # https://www.zhihu.com/question/26627112
 def plot_cmp_hosts(df, sname):
+    plt.cla()
+    plt.clf()
+
     plt.subplot(1, 3, 1)
     for f_nr, model in enumerate(["s", "l", "p"]):
         plt.subplot(1, 3, f_nr + 1)
@@ -82,22 +89,30 @@ def plot_cmp_hosts(df, sname):
                 color=["red", "blue"][h_nr],
             )
             # plt.bar_label(bar, labels=A_ratio, label_type="edge")
-            plt.legend(loc="best", fontsize=18)
-            plt.xlabel("Round", fontsize=18)
-            plt.ylabel("Time", fontsize=18)
+            plt.xticks(fontsize=ticks_fontsize)
+            plt.yticks(fontsize=ticks_fontsize)
+            plt.legend(loc="best", fontsize=legend_fontsize)
+            plt.xlabel("Round", fontsize=label_fontsize)
+            if f_nr == 0:
+                plt.ylabel("Time", fontsize=label_fontsize)
         A_values = df[f"T_{{{sname}}}^{{A,{model}}}"]
         B_values = df[f"T_{{{sname}}}^{{B,{model}}}"]
         A_ratio = B_values / A_values
-        plt.twinx()
-        plt.plot(A_ratio, marker="*", color="black", label="Ratio")
-        plt.legend(loc="best", fontsize=18)
+        _ = plt.twinx()
+        # if f_nr == 2:
+        #     ax.set_ylabel("Ratio", fontsize=label_fontsize)
+        plt.plot(A_ratio, marker="*", color="black", linewidth=10, label="Ratio")
+        plt.yticks(fontsize=ticks_fontsize)
+        if f_nr == 2:
+            plt.ylabel("Ratio", fontsize=label_fontsize)
+        plt.legend(loc="best", fontsize=legend_fontsize)
         # for a, b in zip(list(range(1, 29)), A_ratio):
         #     pc = int(b * 100)
         #     print(a, b)
         #     plt.text(a, b, b, ha="center", va="bottom", fontsize=12)
-        # plt.ylabel("Ratio", fontsize=18)
-        # plt.legend(loc="best", fontsize=18)
-        # plt.title(f"{solver} 求解器", size=18)
+        # plt.ylabel("Ratio", fontsize=30)
+        # plt.legend(loc="best", fontsize=30)
+        # plt.title(f"{solver} 求解器", size=30)
     plt.show()
     plt.savefig(f"plot_cmp_host-{sname}.png")
     plt.cla()
@@ -107,6 +122,7 @@ def plot_cmp_hosts(df, sname):
 if __name__ == "__main__":
     df = merge_csv("all.csv")
     plt.show = lambda: None
+    plt.figure(figsize=(45, 20))
 
     # compare solvers
     for model in ["s", "l", "p"]:
